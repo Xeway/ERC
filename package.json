@@ -1,0 +1,22 @@
+{
+  "name": "erc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xeway/ERC.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Xeway/ERC/issues"
+  },
+  "homepage": "https://github.com/Xeway/ERC#readme",
+  "devDependencies": {
+    "hardhat": "^2.10.2"
+  }
+}
