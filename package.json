@@ -18,5 +18,8 @@
   "homepage": "https://github.com/Xeway/ERC#readme",
   "devDependencies": {
     "hardhat": "^2.10.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.7.3"
   }
 }
