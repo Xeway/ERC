@@ -29,17 +29,32 @@ contract ERC {
     /// @notice premium price (!be aware of token decimals!)
     uint256 public premium;
 
-    /// @notice auctionDuration how long potential buyers can participate in the auction for the premium
-    /// @dev if auctionDuration == 0, no auction
+    /// @notice auctionDeadline how long potential buyers can participate in the auction for the premium
+    /// @dev if auctionDeadline == 0, no auction
     /// @dev the price proposals must be > premium
-    uint256 public immutable auctionDuration;
+    uint256 public immutable auctionDeadline;
 
     address public seller;
     address public buyer;
 
+    /// @notice bids keep track of all the bids for each bidders
+    mapping(address => uint256) public bids;
+    /// @dev bidders used to loop over bids
+    address[] bidders;
+
+    struct LastBid {
+        address user;
+        uint256 amount;
+    }
+
+    /// @notice lastBid current largest bid
+    LastBid public lastBid;
+
     error TransferFailed();
     error InsufficientAmount();
     error InvalidValue();
+    error Expired();
+    error NotExpired();
 
     constructor(
         address _underlyingToken,
@@ -49,12 +64,14 @@ contract ERC {
         uint256 _durationExerciseAfterExpiration,
         address _premiumToken,
         uint256 _premium,
-        uint256 _auctionDuration
-    ) {
+        uint256 _auctionDeadline
+    ) payable {
         if (_underlyingToken == address(0) || _amount == 0) {
             if (msg.value == 0) revert InsufficientAmount();
             amount = msg.value;
         } else {
+            if (msg.value == 0) revert InvalidValue();
+
             bool success = IERC20(_underlyingToken).transferFrom(
                 msg.sender,
                 address(this),
@@ -63,6 +80,8 @@ contract ERC {
             if (!success) revert TransferFailed();
             amount = _amount;
         }
+
+        underlyingToken = _underlyingToken;
 
         strike = _strike;
 
@@ -76,7 +95,74 @@ contract ERC {
 
         premium = _premium;
 
-        auctionDuration = _auctionDuration;
+        auctionDeadline = _auctionDeadline;
         seller = msg.sender;
+    }
+
+    function newAuctionBid(uint256 _bidAmount) external payable {
+        if (auctionDeadline < block.timestamp) revert Expired();
+
+        if (premiumToken == address(0)) {
+            if (
+                lastBid.amount >= bids[msg.sender] + msg.value ||
+                premium >= bids[msg.sender] + msg.value
+            ) revert InsufficientAmount();
+
+            if (bids[msg.sender] == 0) {
+                bidders.push(msg.sender);
+            }
+
+            bids[msg.sender] += msg.value;
+
+            lastBid.user = msg.sender;
+            lastBid.amount = bids[msg.sender];
+        } else {
+            if (msg.value == 0) revert InvalidValue();
+
+            if (
+                lastBid.amount >= bids[msg.sender] + _bidAmount ||
+                premium >= bids[msg.sender] + _bidAmount
+            ) revert InsufficientAmount();
+
+            bool success = IERC20(premiumToken).transferFrom(
+                msg.sender,
+                address(this),
+                _bidAmount
+            );
+            if (!success) revert TransferFailed();
+
+            if (bids[msg.sender] == 0) {
+                bidders.push(msg.sender);
+            }
+
+            bids[msg.sender] += _bidAmount;
+
+            lastBid.user = msg.sender;
+            lastBid.amount = bids[msg.sender];
+        }
+    }
+
+    function endAuction() external {
+        if (auctionDeadline == 0) revert Expired();
+        if (auctionDeadline >= block.timestamp) revert NotExpired();
+
+        for (uint256 i = 0; i < bidders.length; ++i) {
+            address bidder = bidders[i];
+
+            if (premiumToken == address(0)) {
+                if (bidder != lastBid.user) {
+                    (bool success, ) = bidder.call{value: bids[bidder]}("");
+                    if (!success) revert TransferFailed();
+                }
+            } else {
+                if (bidder != lastBid.user) {
+                    bool success = IERC20(premiumToken).transfer(
+                        bidder,
+                        bids[bidder]
+                    );
+                    if (!success) revert TransferFailed();
+                }
+            }
+        }
     }
 }
