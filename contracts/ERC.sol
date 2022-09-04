@@ -106,12 +106,12 @@ contract ERC {
         auctionDeadline = _auctionDeadline;
         seller = msg.sender;
 
-        if (_WETHAddress != address(0)) {
-            WETH = IWETH(_WETHAddress);
-        } else if (
-            _underlyingToken != address(0) || _premiumToken != address(0)
-        ) {
-            WETH = IWETH(address(new WrappedETH()));
+        if (_underlyingToken != address(0) || _premiumToken != address(0)) {
+            if (_WETHAddress != address(0)) {
+                WETH = IWETH(_WETHAddress);
+            } else {
+                WETH = IWETH(address(new WrappedETH()));
+            }
         }
     }
 
