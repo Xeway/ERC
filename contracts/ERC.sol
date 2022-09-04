@@ -1,7 +1,10 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import "./WETH.sol";
+import "./IWETH.sol";
 
 contract ERC {
     /// @notice underlyingToken the underlying token
@@ -50,6 +53,10 @@ contract ERC {
     /// @notice lastBid current largest bid
     LastBid public lastBid;
 
+    /// @notice WETH token
+    /// @dev if in the constructor, _WETHAddr == address(0) then we create a new WETH token
+    IWETH public WETH;
+
     error TransferFailed();
     error InsufficientAmount();
     error InvalidValue();
@@ -64,7 +71,8 @@ contract ERC {
         uint256 _durationExerciseAfterExpiration,
         address _premiumToken,
         uint256 _premium,
-        uint256 _auctionDeadline
+        uint256 _auctionDeadline,
+        address _WETHAddress
     ) payable {
         if (_underlyingToken == address(0) || _amount == 0) {
             if (msg.value == 0) revert InsufficientAmount();
@@ -97,6 +105,14 @@ contract ERC {
 
         auctionDeadline = _auctionDeadline;
         seller = msg.sender;
+
+        if (_WETHAddress != address(0)) {
+            WETH = IWETH(_WETHAddress);
+        } else if (
+            _underlyingToken != address(0) || _premiumToken != address(0)
+        ) {
+            WETH = IWETH(address(new WrappedETH()));
+        }
     }
 
     function newAuctionBid(uint256 _bidAmount) external payable {
