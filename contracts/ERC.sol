@@ -17,11 +17,11 @@ contract ERC {
     /// @notice strike price in USD
     uint256 public immutable strike;
 
-    /// @notice expiration in seconds
+    /// @notice expiration in seconds (date)
     /// @dev must be under the same format as block.timestamp
     uint256 public immutable expiration;
 
-    /// @notice durationExerciseAfterExpiration the duration the buyer can exercise his option
+    /// @notice durationExerciseAfterExpiration the duration the buyer can exercise his option (duration)
     /// @dev must be under the same format as block.timestamp
     uint256 public immutable durationExerciseAfterExpiration;
 
@@ -32,7 +32,7 @@ contract ERC {
     /// @notice premium price (!be aware of token decimals!)
     uint256 public premium;
 
-    /// @notice auctionDeadline how long potential buyers can participate in the auction for the premium
+    /// @notice auctionDeadline how long potential buyers can participate in the auction for the premium (date)
     /// @dev if auctionDeadline == 0, no auction
     /// @dev the price proposals must be > premium
     uint256 public immutable auctionDeadline;
@@ -106,6 +106,7 @@ contract ERC {
 
         premium = _premium;
 
+        if (_auctionDeadline >= _expiration) revert InvalidValue();
         auctionDeadline = _auctionDeadline;
         seller = msg.sender;
     }
