@@ -45,14 +45,6 @@ contract ERC {
     /// @dev bidders used to loop over bids
     address[] bidders;
 
-    struct LastBid {
-        address user;
-        uint256 amount;
-    }
-
-    /// @notice lastBid current largest bid
-    LastBid public lastBid;
-
     /// @notice WETH token
     /// @dev if in the constructor, _WETHAddr == address(0) then we create a new WETH token
     IWETH public WETH;
@@ -62,6 +54,7 @@ contract ERC {
     error InvalidValue();
     error Expired();
     error NotExpired();
+    error Forbidden();
 
     constructor(
         address _underlyingToken,
@@ -74,11 +67,21 @@ contract ERC {
         uint256 _auctionDeadline,
         address _WETHAddress
     ) payable {
+        if (_underlyingToken == address(0) || _premiumToken == address(0)) {
+            if (_WETHAddress != address(0)) {
+                WETH = IWETH(_WETHAddress);
+            } else {
+                WETH = IWETH(address(new WrappedETH()));
+            }
+        }
+
         if (_underlyingToken == address(0) || _amount == 0) {
             if (msg.value == 0) revert InsufficientAmount();
+
+            WETH.deposit{value: msg.value}();
             amount = msg.value;
         } else {
-            if (msg.value == 0) revert InvalidValue();
+            if (msg.value != 0) revert InvalidValue();
 
             bool success = IERC20(_underlyingToken).transferFrom(
                 msg.sender,
@@ -105,80 +108,86 @@ contract ERC {
 
         auctionDeadline = _auctionDeadline;
         seller = msg.sender;
-
-        if (_underlyingToken != address(0) || _premiumToken != address(0)) {
-            if (_WETHAddress != address(0)) {
-                WETH = IWETH(_WETHAddress);
-            } else {
-                WETH = IWETH(address(new WrappedETH()));
-            }
-        }
     }
 
     function newAuctionBid(uint256 _bidAmount) external payable {
         if (auctionDeadline < block.timestamp) revert Expired();
 
-        if (premiumToken == address(0)) {
-            if (
-                lastBid.amount >= bids[msg.sender] + msg.value ||
-                premium >= bids[msg.sender] + msg.value
-            ) revert InsufficientAmount();
+        if (msg.value != 0) revert InvalidValue();
 
-            if (bids[msg.sender] == 0) {
-                bidders.push(msg.sender);
-            }
+        bool success = IERC20(premiumToken).transferFrom(
+            msg.sender,
+            address(this),
+            _bidAmount
+        );
+        if (!success) revert TransferFailed();
 
-            bids[msg.sender] += msg.value;
-
-            lastBid.user = msg.sender;
-            lastBid.amount = bids[msg.sender];
-        } else {
-            if (msg.value == 0) revert InvalidValue();
-
-            if (
-                lastBid.amount >= bids[msg.sender] + _bidAmount ||
-                premium >= bids[msg.sender] + _bidAmount
-            ) revert InsufficientAmount();
-
-            bool success = IERC20(premiumToken).transferFrom(
-                msg.sender,
-                address(this),
-                _bidAmount
-            );
-            if (!success) revert TransferFailed();
-
-            if (bids[msg.sender] == 0) {
-                bidders.push(msg.sender);
-            }
-
-            bids[msg.sender] += _bidAmount;
-
-            lastBid.user = msg.sender;
-            lastBid.amount = bids[msg.sender];
+        if (premium >= bids[msg.sender] + _bidAmount) {
+            revert InsufficientAmount();
         }
+
+        if (bids[msg.sender] == 0) {
+            bidders.push(msg.sender);
+        }
+
+        bids[msg.sender] += _bidAmount;
+
+        buyer = msg.sender;
+        premium = bids[msg.sender];
     }
 
     function endAuction() external {
         if (auctionDeadline == 0) revert Expired();
         if (auctionDeadline >= block.timestamp) revert NotExpired();
 
+        bool success;
+
         for (uint256 i = 0; i < bidders.length; ++i) {
             address bidder = bidders[i];
 
-            if (premiumToken == address(0)) {
-                if (bidder != lastBid.user) {
-                    (bool success, ) = bidder.call{value: bids[bidder]}("");
-                    if (!success) revert TransferFailed();
-                }
-            } else {
-                if (bidder != lastBid.user) {
-                    bool success = IERC20(premiumToken).transfer(
-                        bidder,
-                        bids[bidder]
-                    );
-                    if (!success) revert TransferFailed();
-                }
+            if (bidder != buyer) {
+                success = IERC20(premiumToken).transfer(bidder, bids[bidder]);
+                if (!success) revert TransferFailed();
             }
         }
+
+        success = IERC20(premiumToken).transfer(seller, premium);
+        if (!success) revert TransferFailed();
     }
+
+    function buyOption() external payable {
+        if (auctionDeadline != 0) revert Forbidden();
+
+        if (msg.value != 0) revert InvalidValue();
+
+        bool success = IERC20(premiumToken).transferFrom(
+            msg.sender,
+            seller,
+            premium
+        );
+        if (!success) revert TransferFailed();
+
+        buyer = msg.sender;
+    }
+
+    function wrapToken() external payable {
+        WETH.deposit{value: msg.value}();
+
+        bool success = WETH.transfer(msg.sender, msg.value);
+        if (!success) revert TransferFailed();
+    }
+
+    function unWrapToken(uint256 _amount) external {
+        bool success = WETH.transferFrom(msg.sender, address(this), _amount);
+        if (!success) revert TransferFailed();
+
+        WETH.withdraw(_amount);
+
+        (success, ) = payable(msg.sender).call{value: _amount}("");
+        if (!success) revert TransferFailed();
+    }
+
+    // WETH
+    // if no one took part of the option
+    // if no auction at all
 }
