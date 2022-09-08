@@ -209,11 +209,20 @@ contract ERC {
     }
 
     function retrieveExpiredTokens() external {
-        if (optionState != OptionState.Bought) revert Forbidden();
+        if (
+            optionState != OptionState.Bought &&
+            optionState != OptionState.Created
+        ) revert Forbidden();
 
         if (msg.sender != seller) revert Forbidden();
-        if (block.timestamp <= expiration + durationExerciseAfterExpiration)
-            revert Forbidden();
+
+        // if no one bought this option, the seller can retrieve their tokens as soon as it expires
+        if (optionState == OptionState.Created) {
+            if (block.timestamp <= expiration) revert Forbidden();
+        } else {
+            if (block.timestamp <= expiration + durationExerciseAfterExpiration)
+                revert Forbidden();
+        }
 
         bool success = IERC20(underlyingToken).transfer(seller, amount);
         if (!success) revert TransferFailed();
