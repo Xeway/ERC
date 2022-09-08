@@ -9,7 +9,7 @@ import "./IWETH.sol";
 contract ERC {
     /// @notice underlyingToken the underlying token
     /// @dev if underlyingToken == address(0), native currency is the underlying asset
-    address public immutable underlyingToken;
+    address public underlyingToken;
 
     /// @notice the amount of the underlying asset
     uint256 public amount;
@@ -27,7 +27,7 @@ contract ERC {
 
     /// @notice premiumToken the token the premium has to be paid
     /// @dev if premiumToken == address(0), premium is paid with native currency
-    address public immutable premiumToken;
+    address public premiumToken;
 
     /// @notice premium price (!be aware of token decimals!)
     uint256 public premium;
@@ -79,10 +79,10 @@ contract ERC {
             if (msg.value == 0) revert InsufficientAmount();
 
             WETH.deposit{value: msg.value}();
+
+            underlyingToken = address(WETH);
             amount = msg.value;
         } else {
-            if (msg.value != 0) revert InvalidValue();
-
             bool success = IERC20(_underlyingToken).transferFrom(
                 msg.sender,
                 address(this),
@@ -92,8 +92,6 @@ contract ERC {
             amount = _amount;
         }
 
-        underlyingToken = _underlyingToken;
-
         strike = _strike;
 
         if (_expiration <= block.timestamp) revert InvalidValue();
@@ -102,7 +100,11 @@ contract ERC {
         if (_durationExerciseAfterExpiration == 0) revert InvalidValue();
         durationExerciseAfterExpiration = _durationExerciseAfterExpiration;
 
-        premiumToken = _premiumToken;
+        if (_premiumToken == address(0)) {
+            premiumToken = address(WETH);
+        } else {
+            premiumToken = _premiumToken;
+        }
 
         premium = _premium;
 
@@ -111,10 +113,8 @@ contract ERC {
         seller = msg.sender;
     }
 
-    function newAuctionBid(uint256 _bidAmount) external payable {
+    function newAuctionBid(uint256 _bidAmount) external {
         if (auctionDeadline < block.timestamp) revert Expired();
-
-        if (msg.value != 0) revert InvalidValue();
 
         bool success = IERC20(premiumToken).transferFrom(
             msg.sender,
@@ -156,10 +156,9 @@ contract ERC {
         if (!success) revert TransferFailed();
     }
 
-    function buyOption() external payable {
-        if (auctionDeadline != 0) revert Forbidden();
-
-        if (msg.value != 0) revert InvalidValue();
+    function buyOption() external {
+        if (auctionDeadline > 0) revert Forbidden();
+        if (block.timestamp >= expiration) revert Forbidden();
 
         bool success = IERC20(premiumToken).transferFrom(
             msg.sender,
@@ -169,6 +168,27 @@ contract ERC {
         if (!success) revert TransferFailed();
 
         buyer = msg.sender;
+    }
+
+    function exerciseOption() external {
+        if (msg.sender != buyer) revert Forbidden();
+
+        if (block.timestamp > expiration) revert Expired();
+        if (block.timestamp <= auctionDeadline) revert Forbidden();
+        if (block.timestamp > expiration + durationExerciseAfterExpiration)
+            revert Forbidden();
+
+        bool success = IERC20(underlyingToken).transfer(buyer, amount);
+        if (!success) revert TransferFailed();
+    }
+
+    function retrieveExpiredTokens() external {
+        if (msg.sender != seller) revert Forbidden();
+        if (block.timestamp <= expiration + durationExerciseAfterExpiration)
+            revert Forbidden();
+
+        bool success = IERC20(underlyingToken).transfer(seller, amount);
+        if (!success) revert TransferFailed();
     }
 
     function wrapToken() external payable {
