@@ -40,6 +40,15 @@ contract ERC {
     address public seller;
     address public buyer;
 
+    enum OptionState {
+        Created,
+        Bought,
+        Exercised,
+        Expired
+    }
+
+    OptionState public optionState;
+
     /// @notice bids keep track of all the bids for each bidders
     mapping(address => uint256) public bids;
     /// @dev bidders used to loop over bids
@@ -111,10 +120,18 @@ contract ERC {
         if (_auctionDeadline >= _expiration) revert InvalidValue();
         auctionDeadline = _auctionDeadline;
         seller = msg.sender;
+
+        optionState = OptionState.Created;
     }
 
     function newAuctionBid(uint256 _bidAmount) external {
+        if (optionState != OptionState.Created) revert Expired();
+
         if (auctionDeadline < block.timestamp) revert Expired();
+
+        if (premium >= bids[msg.sender] + _bidAmount) {
+            revert InsufficientAmount();
+        }
 
         bool success = IERC20(premiumToken).transferFrom(
             msg.sender,
@@ -122,10 +139,6 @@ contract ERC {
             _bidAmount
         );
         if (!success) revert TransferFailed();
-
-        if (premium >= bids[msg.sender] + _bidAmount) {
-            revert InsufficientAmount();
-        }
 
         if (bids[msg.sender] == 0) {
             bidders.push(msg.sender);
@@ -138,6 +151,8 @@ contract ERC {
     }
 
     function endAuction() external {
+        if (optionState != OptionState.Created) revert Forbidden();
+
         if (auctionDeadline == 0) revert Expired();
         if (auctionDeadline >= block.timestamp) revert NotExpired();
 
@@ -154,9 +169,14 @@ contract ERC {
 
         success = IERC20(premiumToken).transfer(seller, premium);
         if (!success) revert TransferFailed();
+
+        optionState = OptionState.Bought;
     }
 
     function buyOption() external {
+        if (optionState != OptionState.Created) revert Forbidden();
+        if (buyer != address(0)) revert Forbidden();
+
         if (auctionDeadline > 0) revert Forbidden();
         if (block.timestamp >= expiration) revert Forbidden();
 
@@ -168,9 +188,13 @@ contract ERC {
         if (!success) revert TransferFailed();
 
         buyer = msg.sender;
+
+        optionState = OptionState.Bought;
     }
 
     function exerciseOption() external {
+        if (optionState != OptionState.Bought) revert Forbidden();
+
         if (msg.sender != buyer) revert Forbidden();
 
         if (block.timestamp > expiration) revert Expired();
@@ -180,15 +204,21 @@ contract ERC {
 
         bool success = IERC20(underlyingToken).transfer(buyer, amount);
         if (!success) revert TransferFailed();
+
+        optionState = OptionState.Exercised;
     }
 
     function retrieveExpiredTokens() external {
+        if (optionState != OptionState.Bought) revert Forbidden();
+
         if (msg.sender != seller) revert Forbidden();
         if (block.timestamp <= expiration + durationExerciseAfterExpiration)
             revert Forbidden();
 
         bool success = IERC20(underlyingToken).transfer(seller, amount);
         if (!success) revert TransferFailed();
+
+        optionState = OptionState.Expired;
     }
 
     function wrapToken() external payable {
@@ -207,8 +237,4 @@ contract ERC {
         (success, ) = payable(msg.sender).call{value: _amount}("");
         if (!success) revert TransferFailed();
     }
-
-    // WETH
-    // if no one took part of the option
-    // if no auction at all
 }
