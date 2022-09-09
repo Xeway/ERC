@@ -126,6 +126,7 @@ contract ERC {
     }
 
     /// @notice function called by a bid participant wanting to higher the actual bid
+    /// @param _bidAmount amount to give that must higher the last bid
     /// @dev if auctionDeadline == 0, this function should not be called
     /// because there is auction
     function newAuctionBid(uint256 _bidAmount) external {
@@ -260,6 +261,7 @@ contract ERC {
     }
 
     /// @notice give x amount of wrapped native currency, and receive x amount of native currency
+    /// @param _amount wrapped native currency amount to swap
     function unWrapToken(uint256 _amount) external {
         bool success = WETH.transferFrom(msg.sender, address(this), _amount);
         if (!success) revert TransferFailed();
