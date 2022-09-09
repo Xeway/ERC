@@ -134,7 +134,9 @@ contract ERC {
 
         if (auctionDeadline < block.timestamp) revert Expired();
 
-        if (premium >= bids[msg.sender] + _bidAmount) {
+        uint256 senderBid = bids[msg.sender];
+
+        if (premium >= senderBid + _bidAmount) {
             revert InsufficientAmount();
         }
 
@@ -145,7 +147,7 @@ contract ERC {
         );
         if (!success) revert TransferFailed();
 
-        if (bids[msg.sender] == 0) {
+        if (senderBid == 0) {
             bidders.push(msg.sender);
         }
 
