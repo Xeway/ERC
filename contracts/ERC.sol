@@ -55,7 +55,8 @@ contract ERC {
     address[] bidders;
 
     /// @notice WETH token
-    /// @dev if in the constructor, _WETHAddr == address(0) then we create a new WETH token
+    /// @dev if in the constructor _underlyingToken or _premiumToken == address(0)
+    /// then we check if _WETHAddr == address(0). If so, we create a new WETH token
     IWETH public WETH;
 
     error TransferFailed();
@@ -124,6 +125,9 @@ contract ERC {
         optionState = OptionState.Created;
     }
 
+    /// @notice function called by a bid participant wanting to higher the actual bid
+    /// @dev if auctionDeadline == 0, this function should not be called
+    /// because there is auction
     function newAuctionBid(uint256 _bidAmount) external {
         if (optionState != OptionState.Created) revert Expired();
 
@@ -150,6 +154,12 @@ contract ERC {
         premium = bids[msg.sender];
     }
 
+    /// @notice give back to all auction participant their funds + give premium to seller
+    /// @dev can only be called after the auction finished
+    /// @dev one user have to call this function, otherwise participant won't get their funds back
+    /// and seller won't receive the premium
+    /// @dev if auctionDeadline == 0, this function should not be called
+    /// because there is auction
     function endAuction() external {
         if (optionState != OptionState.Created) revert Forbidden();
 
@@ -173,6 +183,8 @@ contract ERC {
         optionState = OptionState.Bought;
     }
 
+    /// @notice buy option and give premium to seller
+    /// @dev should be called when there is no auction (when premium is constant)
     function buyOption() external {
         if (optionState != OptionState.Created) revert Forbidden();
         if (buyer != address(0)) revert Forbidden();
@@ -192,6 +204,7 @@ contract ERC {
         optionState = OptionState.Bought;
     }
 
+    /// @notice buyer exercise his option = receive the x amount of underlyingToken
     function exerciseOption() external {
         if (optionState != OptionState.Bought) revert Forbidden();
 
@@ -208,6 +221,8 @@ contract ERC {
         optionState = OptionState.Exercised;
     }
 
+    /// @notice if buyer hasn't exercised his option during the period 'durationExerciseAfterExpiration',
+    /// seller can retrieve their funds
     function retrieveExpiredTokens() external {
         if (
             optionState != OptionState.Bought &&
@@ -230,6 +245,13 @@ contract ERC {
         optionState = OptionState.Expired;
     }
 
+    /*
+     *
+     * Utility functions
+     *
+    */
+
+    /// @notice give x amount of native currency, and receive x amount of wrapped native currency
     function wrapToken() external payable {
         WETH.deposit{value: msg.value}();
 
@@ -237,6 +259,7 @@ contract ERC {
         if (!success) revert TransferFailed();
     }
 
+    /// @notice give x amount of wrapped native currency, and receive x amount of native currency
     function unWrapToken(uint256 _amount) external {
         bool success = WETH.transferFrom(msg.sender, address(this), _amount);
         if (!success) revert TransferFailed();
