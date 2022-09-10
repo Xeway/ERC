@@ -166,21 +166,24 @@ contract ERC {
     function endAuction() external {
         if (optionState != OptionState.Created) revert Forbidden();
 
-        if (auctionDeadline == 0) revert Expired();
-        if (auctionDeadline >= block.timestamp) revert NotExpired();
+        uint256 m_auctionDeadline = auctionDeadline;
+        
+        if (m_auctionDeadline == 0) revert Expired();
+        if (m_auctionDeadline >= block.timestamp) revert NotExpired();
 
         bool success;
+        address m_premiumToken = premiumToken;
 
         for (uint256 i = 0; i < bidders.length; ++i) {
             address bidder = bidders[i];
 
             if (bidder != buyer) {
-                success = IERC20(premiumToken).transfer(bidder, bids[bidder]);
+                success = IERC20(m_premiumToken).transfer(bidder, bids[bidder]);
                 if (!success) revert TransferFailed();
             }
         }
 
-        success = IERC20(premiumToken).transfer(seller, premium);
+        success = IERC20(m_premiumToken).transfer(seller, premium);
         if (!success) revert TransferFailed();
 
         optionState = OptionState.Bought;
@@ -211,14 +214,18 @@ contract ERC {
     function exerciseOption() external {
         if (optionState != OptionState.Bought) revert Forbidden();
 
-        if (msg.sender != buyer) revert Forbidden();
+        address m_buyer = buyer;
 
-        if (block.timestamp > expiration) revert Expired();
+        if (msg.sender != m_buyer) revert Forbidden();
+
+        uint256 m_expiration = expiration;
+
+        if (block.timestamp > m_expiration) revert Expired();
         if (block.timestamp <= auctionDeadline) revert Forbidden();
-        if (block.timestamp > expiration + durationExerciseAfterExpiration)
+        if (block.timestamp > m_expiration + durationExerciseAfterExpiration)
             revert Forbidden();
 
-        bool success = IERC20(underlyingToken).transfer(buyer, amount);
+        bool success = IERC20(underlyingToken).transfer(m_buyer, amount);
         if (!success) revert TransferFailed();
 
         optionState = OptionState.Exercised;
@@ -227,22 +234,26 @@ contract ERC {
     /// @notice if buyer hasn't exercised his option during the period 'durationExerciseAfterExpiration',
     /// seller can retrieve their funds
     function retrieveExpiredTokens() external {
+        OptionState m_optionState = optionState;
+
         if (
-            optionState != OptionState.Bought &&
-            optionState != OptionState.Created
+            m_optionState != OptionState.Bought &&
+            m_optionState != OptionState.Created
         ) revert Forbidden();
 
-        if (msg.sender != seller) revert Forbidden();
+        address m_seller = seller;
+
+        if (msg.sender != m_seller) revert Forbidden();
 
         // if no one bought this option, the seller can retrieve their tokens as soon as it expires
-        if (optionState == OptionState.Created) {
+        if (m_optionState == OptionState.Created) {
             if (block.timestamp <= expiration) revert Forbidden();
         } else {
             if (block.timestamp <= expiration + durationExerciseAfterExpiration)
                 revert Forbidden();
         }
 
-        bool success = IERC20(underlyingToken).transfer(seller, amount);
+        bool success = IERC20(underlyingToken).transfer(m_seller, amount);
         if (!success) revert TransferFailed();
 
         optionState = OptionState.Expired;
