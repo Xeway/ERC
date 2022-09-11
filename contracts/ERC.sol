@@ -167,7 +167,7 @@ contract ERC {
         if (optionState != OptionState.Created) revert Forbidden();
 
         uint256 m_auctionDeadline = auctionDeadline;
-        
+
         if (m_auctionDeadline == 0) revert Expired();
         if (m_auctionDeadline >= block.timestamp) revert NotExpired();
 
@@ -263,7 +263,7 @@ contract ERC {
      *
      * Utility functions
      *
-    */
+     */
 
     /// @notice give x amount of native currency, and receive x amount of wrapped native currency
     function wrapToken() external payable {
@@ -283,5 +283,39 @@ contract ERC {
 
         (success, ) = payable(msg.sender).call{value: _amount}("");
         if (!success) revert TransferFailed();
+    }
+
+    function getFullProperties()
+        external
+        view
+        returns (
+            address,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            address,
+            uint256,
+            uint256,
+            address,
+            address,
+            OptionState,
+            address
+        )
+    {
+        return (
+            underlyingToken,
+            amount,
+            strike,
+            expiration,
+            durationExerciseAfterExpiration,
+            premiumToken,
+            premium,
+            auctionDeadline,
+            seller,
+            buyer,
+            optionState,
+            address(WETH)
+        );
     }
 }
