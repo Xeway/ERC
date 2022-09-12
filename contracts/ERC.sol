@@ -325,7 +325,7 @@ contract ERC {
                 ) // underlyingToken.slot == 0
             }
 
-            return(freeMemPointer, add(add(freeMemPointer, i), 0x20))
+            return(freeMemPointer, i) // i == 0x180 == add(add(freeMemPointer, i), 0x20)
         }
 
         /* The assembly code above is the equivalent of :
