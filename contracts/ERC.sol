@@ -49,15 +49,15 @@ contract ERC {
 
     OptionState public optionState;
 
-    /// @notice bids keep track of all the bids for each bidders
-    mapping(address => uint256) public bids;
-    /// @dev bidders used to loop over bids
-    address[] bidders;
-
     /// @notice WETH token
     /// @dev if in the constructor _underlyingToken or _premiumToken == address(0)
     /// then we check if _WETHAddr == address(0). If so, we create a new WETH token
     IWETH public WETH;
+
+    /// @notice bids keep track of all the bids for each bidders
+    mapping(address => uint256) public bids;
+    /// @dev bidders used to loop over bids
+    address[] bidders;
 
     error TransferFailed();
     error InsufficientAmount();
@@ -303,6 +303,29 @@ contract ERC {
             address
         )
     {
+        assembly {
+            let freeMemPointer := mload(0x40)
+
+            let i := 0x00
+
+            for {
+                let j := 0x00
+            } lt(i, 0x180) {
+                // 0x180 == 384 == number of slots (= variables stored) * 32 bytes == 12 * 32
+                i := add(i, 0x20)
+                j := add(j, 0x01)
+            } {
+                mstore(
+                    add(freeMemPointer, i),
+                    sload(add(underlyingToken.slot, j))
+                ) // underlyingToken.slot == 0
+            }
+
+            return(freeMemPointer, add(add(freeMemPointer, i), 0x20))
+        }
+
+        /* The assembly code above is the equivalent of :
+
         return (
             underlyingToken,
             amount,
@@ -316,6 +339,6 @@ contract ERC {
             buyer,
             optionState,
             address(WETH)
-        );
+        ); */
     }
 }
