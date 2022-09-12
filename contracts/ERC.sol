@@ -306,10 +306,14 @@ contract ERC {
         assembly {
             let freeMemPointer := mload(0x40)
 
-            let i := 0x00
+            let i := 0x20
+            let j := 0x01
+
+            // first mstore not in the loop, more gas efficient because it avoids using add()
+            mstore(freeMemPointer, sload(underlyingToken.slot))
 
             for {
-                let j := 0x00
+
             } lt(i, 0x180) {
                 // 0x180 == 384 == number of slots (= variables stored) * 32 bytes == 12 * 32
                 i := add(i, 0x20)
