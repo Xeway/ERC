@@ -285,6 +285,10 @@ contract ERC {
         if (!success) revert TransferFailed();
     }
 
+    /// @notice return all the properties of that option
+    /// @notice it prevents having to make multiple calls
+    /// @dev doesn't include the bidders and bids array/map
+    /// @dev it's using inline assembly for gas efficiency purpose, so the code is not very flexible
     function getFullProperties()
         external
         view
