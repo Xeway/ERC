@@ -54,6 +54,10 @@ contract ERC {
     /// then we check if _WETHAddr == address(0). If so, we create a new WETH token
     IWETH public WETH;
 
+    /// @notice stable coin used to pay to the seller when buyer exercise option
+    /// @dev buyer will pay amount * strike (ex: 2 ETH * 3000 USD = 6000 USD in DAI)
+    IERC20 public STABLE;
+
     /// @notice bids keep track of all the bids for each bidders
     mapping(address => uint256) public bids;
     /// @dev bidders used to loop over bids
@@ -75,7 +79,8 @@ contract ERC {
         address _premiumToken,
         uint256 _premium,
         uint256 _auctionDeadline,
-        address _WETHAddress
+        address _WETHAddress,
+        address _STABLEAddress
     ) payable {
         if (_underlyingToken == address(0) || _premiumToken == address(0)) {
             if (_WETHAddress != address(0)) {
@@ -120,6 +125,45 @@ contract ERC {
 
         if (_auctionDeadline >= _expiration) revert InvalidValue();
         auctionDeadline = _auctionDeadline;
+
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+
+        // if no stablecoin address is provided,
+        // stablecoin is set to DAI
+        // if the contract is not in one of the chains listed bellow,
+        // then it will revert
+        if (_STABLEAddress == address(0)) {
+            if (chainId == 1) {
+                //Mainnet
+                STABLE = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+            } else if (chainId == 56) {
+                // Binance smart chain
+                STABLE = IERC20(0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3);
+            } else if (chainId == 137) {
+                // Polygon
+                STABLE = IERC20(0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063);
+            } else if (chainId == 43114) {
+                // Avalanche
+                STABLE = IERC20(0xd586E7F844cEa2F87f50152665BCbc2C279D8d70);
+            } else if (chainId == 10) {
+                // Optimism
+                STABLE = IERC20(0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1);
+            } else if (chainId == 42161) {
+                // Arbitrum
+                STABLE = IERC20(0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1);
+            } else if (chainId == 250) {
+                // Fantom
+                STABLE = IERC20(0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E);
+            } else {
+                revert InvalidValue();
+            }
+        } else {
+            STABLE = IERC20(_STABLEAddress);
+        }
+
         seller = msg.sender;
 
         optionState = OptionState.Created;
