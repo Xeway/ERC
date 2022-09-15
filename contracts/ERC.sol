@@ -40,7 +40,7 @@ contract ERC {
     /// @dev the price proposals must be > premium
     uint256 public immutable auctionDeadline;
 
-    address public seller;
+    address public writer;
     address public buyer;
 
     enum OptionState {
@@ -57,7 +57,7 @@ contract ERC {
     /// then we check if _WETHAddr == address(0). If so, we create a new WETH token
     IWETH public WETH;
 
-    /// @notice stable coin used to pay to the seller when buyer exercise option
+    /// @notice stable coin used to pay to the writer when buyer exercise option
     /// @dev buyer will pay amount * strike (ex: 2 ETH * 3000 USD = 6000 USD in DAI)
     IERC20 public STABLE;
 
@@ -167,7 +167,7 @@ contract ERC {
             STABLE = IERC20(_STABLEAddress);
         }
 
-        seller = msg.sender;
+        writer = msg.sender;
 
         optionState = OptionState.Created;
     }
@@ -204,10 +204,10 @@ contract ERC {
         premium = bids[msg.sender];
     }
 
-    /// @notice give back to all auction participant their funds + give premium to seller
+    /// @notice give back to all auction participant their funds + give premium to writer
     /// @dev can only be called after the auction finished
     /// @dev one user have to call this function, otherwise participant won't get their funds back
-    /// and seller won't receive the premium
+    /// and writer won't receive the premium
     /// @dev if auctionDeadline == 0, this function should not be called
     /// because there is auction
     function endAuction() external {
@@ -230,13 +230,13 @@ contract ERC {
             }
         }
 
-        success = IERC20(m_premiumToken).transfer(seller, premium);
+        success = IERC20(m_premiumToken).transfer(writer, premium);
         if (!success) revert TransferFailed();
 
         optionState = OptionState.Bought;
     }
 
-    /// @notice buy option and give premium to seller
+    /// @notice buy option and give premium to writer
     /// @dev should be called when there is no auction (when premium is constant)
     function buyOption() external {
         if (optionState != OptionState.Created) revert Forbidden();
@@ -247,7 +247,7 @@ contract ERC {
 
         bool success = IERC20(premiumToken).transferFrom(
             msg.sender,
-            seller,
+            writer,
             premium
         );
         if (!success) revert TransferFailed();
@@ -270,25 +270,29 @@ contract ERC {
         if (block.timestamp > m_expiration + durationExerciseAfterExpiration)
             revert Forbidden();
 
-        uint256 underlyingDecimals = ERC20(underlyingToken).decimals();
+        address m_underlyingToken = underlyingToken;
+
+        uint256 underlyingDecimals = ERC20(m_underlyingToken).decimals();
+
+        uint256 m_amount = amount;
 
         // buyer give buy the undelying asset at price `strike`
         bool success = STABLE.transferFrom(
             msg.sender,
-            seller,
-            (strike * amount) / 10**(underlyingDecimals)
+            writer,
+            (strike * m_amount) / 10**(underlyingDecimals)
         );
         if (!success) revert TransferFailed();
 
         // transfer funds to buyer
-        success = IERC20(underlyingToken).transfer(msg.sender, amount);
+        success = IERC20(m_underlyingToken).transfer(msg.sender, m_amount);
         if (!success) revert TransferFailed();
 
         optionState = OptionState.Exercised;
     }
 
     /// @notice if buyer hasn't exercised his option during the period 'durationExerciseAfterExpiration',
-    /// seller can retrieve their funds
+    /// writer can retrieve their funds
     function retrieveExpiredTokens() external {
         OptionState m_optionState = optionState;
 
@@ -297,11 +301,11 @@ contract ERC {
             m_optionState != OptionState.Created
         ) revert Forbidden();
 
-        address m_seller = seller;
+        address m_writer = writer;
 
-        if (msg.sender != m_seller) revert Forbidden();
+        if (msg.sender != m_writer) revert Forbidden();
 
-        // if no one bought this option, the seller can retrieve their tokens as soon as it expires
+        // if no one bought this option, the writer can retrieve their tokens as soon as it expires
         if (m_optionState == OptionState.Created) {
             if (block.timestamp <= expiration) revert Forbidden();
         } else {
@@ -309,7 +313,7 @@ contract ERC {
                 revert Forbidden();
         }
 
-        bool success = IERC20(underlyingToken).transfer(m_seller, amount);
+        bool success = IERC20(underlyingToken).transfer(m_writer, amount);
         if (!success) revert TransferFailed();
 
         optionState = OptionState.Expired;
@@ -399,7 +403,7 @@ contract ERC {
             premiumToken,
             premium,
             auctionDeadline,
-            seller,
+            writer,
             buyer,
             optionState,
             address(WETH)
