@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "./WETH.sol";
 import "./IWETH.sol";
@@ -14,7 +15,9 @@ contract ERC {
     /// @notice the amount of the underlying asset
     uint256 public amount;
 
-    /// @notice strike price in USD
+    /// @notice strike price determined according to the stable coin decimals
+    // ex: my strike price is $2500 in USDC (6 decimals)
+    // so strike = 2500*(10**6) = 2500000000
     uint256 public immutable strike;
 
     /// @notice expiration in seconds (date)
@@ -258,9 +261,7 @@ contract ERC {
     function exerciseOption() external {
         if (optionState != OptionState.Bought) revert Forbidden();
 
-        address m_buyer = buyer;
-
-        if (msg.sender != m_buyer) revert Forbidden();
+        if (msg.sender != buyer) revert Forbidden();
 
         uint256 m_expiration = expiration;
 
@@ -269,7 +270,18 @@ contract ERC {
         if (block.timestamp > m_expiration + durationExerciseAfterExpiration)
             revert Forbidden();
 
-        bool success = IERC20(underlyingToken).transfer(m_buyer, amount);
+        uint256 underlyingDecimals = ERC20(underlyingToken).decimals();
+
+        // buyer give buy the undelying asset at price `strike`
+        bool success = STABLE.transferFrom(
+            msg.sender,
+            seller,
+            (strike * amount) / 10**(underlyingDecimals)
+        );
+        if (!success) revert TransferFailed();
+
+        // transfer funds to buyer
+        success = IERC20(underlyingToken).transfer(msg.sender, amount);
         if (!success) revert TransferFailed();
 
         optionState = OptionState.Exercised;
