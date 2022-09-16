@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./WETH.sol";
-import "./IWETH.sol";
+import "./tokens/WETH.sol";
+import "./tokens/IWETH.sol";
 
-contract ERC {
+contract CallOption {
     /// @notice underlyingToken the underlying token
     /// @dev if underlyingToken == address(0), native currency is the underlying asset
     address public underlyingToken;
