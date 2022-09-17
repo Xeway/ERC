@@ -85,7 +85,18 @@ contract CallOption {
         address _WETHAddress,
         address _STABLEAddress
     ) payable {
-        if (_underlyingToken == address(0) || _premiumToken == address(0)) {
+        // the underlying token and the stablecoin cannot be the same
+        if (
+            _underlyingToken == _STABLEAddress && _underlyingToken != address(0)
+        ) {
+            revert InvalidValue();
+        }
+
+        if (
+            _underlyingToken == address(0) ||
+            _premiumToken == address(0) ||
+            _STABLEAddress == address(0)
+        ) {
             if (_WETHAddress != address(0)) {
                 WETH = IWETH(_WETHAddress);
             } else {
@@ -161,7 +172,13 @@ contract CallOption {
                 // Fantom
                 STABLE = IERC20(0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E);
             } else {
-                revert InvalidValue();
+                // if (...), this means that WETH has been set to _underlyingToken
+                // so STABLE can't be the same coin
+                if (_underlyingToken == address(0) || _amount == 0) {
+                    revert InvalidValue();
+                } else {
+                    STABLE = IERC20(address(WETH));
+                }
             }
         } else {
             STABLE = IERC20(_STABLEAddress);
