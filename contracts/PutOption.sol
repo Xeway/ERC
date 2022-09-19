@@ -85,7 +85,17 @@ contract PutOption {
         address _WETHAddress,
         address _STABLEAddress
     ) payable {
-        if (_underlyingToken == address(0) || _premiumToken == address(0)) {
+        // the underlying token and the stablecoin cannot be the same
+        if (
+            _underlyingToken == _STABLEAddress && _underlyingToken != address(0)
+        ) {
+            revert InvalidValue();
+        }
+
+        if (
+            _underlyingToken == address(0) ||
+            _premiumToken == address(0)
+        ) {
             if (_WETHAddress != address(0)) {
                 WETH = IWETH(_WETHAddress);
             } else {
