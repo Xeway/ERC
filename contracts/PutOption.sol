@@ -92,10 +92,7 @@ contract PutOption {
             revert InvalidValue();
         }
 
-        if (
-            _underlyingToken == address(0) ||
-            _premiumToken == address(0)
-        ) {
+        if (_underlyingToken == address(0) || _premiumToken == address(0)) {
             if (_WETHAddress != address(0)) {
                 WETH = IWETH(_WETHAddress);
             } else {
