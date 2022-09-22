@@ -100,42 +100,6 @@ contract PutOption {
             }
         }
 
-        if (_underlyingToken == address(0) || _amount == 0) {
-            if (msg.value == 0) revert InsufficientAmount();
-
-            WETH.deposit{value: msg.value}();
-
-            underlyingToken = address(WETH);
-            amount = msg.value;
-        } else {
-            bool success = IERC20(_underlyingToken).transferFrom(
-                msg.sender,
-                address(this),
-                _amount
-            );
-            if (!success) revert TransferFailed();
-            amount = _amount;
-        }
-
-        strike = _strike;
-
-        if (_expiration <= block.timestamp) revert InvalidValue();
-        expiration = _expiration;
-
-        if (_durationExerciseAfterExpiration == 0) revert InvalidValue();
-        durationExerciseAfterExpiration = _durationExerciseAfterExpiration;
-
-        if (_premiumToken == address(0)) {
-            premiumToken = address(WETH);
-        } else {
-            premiumToken = _premiumToken;
-        }
-
-        premium = _premium;
-
-        if (_auctionDeadline >= _expiration) revert InvalidValue();
-        auctionDeadline = _auctionDeadline;
-
         uint256 chainId;
         assembly {
             chainId := chainid()
@@ -173,6 +137,52 @@ contract PutOption {
         } else {
             STABLE = IERC20(_STABLEAddress);
         }
+
+        uint256 underlyingDecimals = ERC20(_underlyingToken).decimals();
+
+        bool success = STABLE.transferFrom(
+            msg.sender,
+            address(this),
+            (_strike * _amount) / 10**(underlyingDecimals)
+        );
+        if (!success) revert TransferFailed();
+        amount = _amount;
+
+        if (_underlyingToken == address(0) || _amount == 0) {
+            if (msg.value == 0) revert InsufficientAmount();
+
+            WETH.deposit{value: msg.value}();
+
+            underlyingToken = address(WETH);
+            amount = msg.value;
+        } else {
+            bool success = IERC20(_underlyingToken).transferFrom(
+                msg.sender,
+                address(this),
+                _amount
+            );
+            if (!success) revert TransferFailed();
+            amount = _amount;
+        }
+
+        strike = _strike;
+
+        if (_expiration <= block.timestamp) revert InvalidValue();
+        expiration = _expiration;
+
+        if (_durationExerciseAfterExpiration == 0) revert InvalidValue();
+        durationExerciseAfterExpiration = _durationExerciseAfterExpiration;
+
+        if (_premiumToken == address(0)) {
+            premiumToken = address(WETH);
+        } else {
+            premiumToken = _premiumToken;
+        }
+
+        premium = _premium;
+
+        if (_auctionDeadline >= _expiration) revert InvalidValue();
+        auctionDeadline = _auctionDeadline;
 
         writer = msg.sender;
 
