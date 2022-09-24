@@ -4,9 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./tokens/WETH.sol";
-import "./tokens/IWETH.sol";
-
 contract PutOption {
     /// @notice underlyingToken the underlying token
     /// @dev if underlyingToken == address(0), native currency is the underlying asset
@@ -52,11 +49,6 @@ contract PutOption {
 
     OptionState public optionState;
 
-    /// @notice WETH token
-    /// @dev if in the constructor _underlyingToken or _premiumToken == address(0)
-    /// then we check if _WETHAddr == address(0). If so, we create a new WETH token
-    IWETH public WETH;
-
     /// @notice stable coin used to pay to the writer when buyer exercise option
     /// @dev buyer will pay amount * strike (ex: 2 ETH * 3000 USD = 6000 USD in DAI)
     IERC20 public STABLE;
@@ -82,7 +74,6 @@ contract PutOption {
         address _premiumToken,
         uint256 _premium,
         uint256 _auctionDeadline,
-        address _WETHAddress,
         address _STABLEAddress
     ) payable {
         // the underlying token and the stablecoin cannot be the same
@@ -92,78 +83,23 @@ contract PutOption {
             revert InvalidValue();
         }
 
-        if (_underlyingToken == address(0) || _premiumToken == address(0)) {
-            if (_WETHAddress != address(0)) {
-                WETH = IWETH(_WETHAddress);
-            } else {
-                WETH = IWETH(address(new WrappedETH()));
-            }
+        if (
+            _underlyingToken == address(0) ||
+            _premiumToken == address(0) ||
+            _amount == 0 ||
+            _STABLEAddress == address(0)
+        ) {
+            revert InvalidValue();
         }
 
-        uint256 chainId;
-        assembly {
-            chainId := chainid()
-        }
-
-        // if no stablecoin address is provided,
-        // stablecoin is set to DAI
-        // if the contract is not in one of the chains listed bellow,
-        // then it will revert
-        if (_STABLEAddress == address(0)) {
-            if (chainId == 1) {
-                //Mainnet
-                STABLE = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-            } else if (chainId == 56) {
-                // Binance smart chain
-                STABLE = IERC20(0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3);
-            } else if (chainId == 137) {
-                // Polygon
-                STABLE = IERC20(0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063);
-            } else if (chainId == 43114) {
-                // Avalanche
-                STABLE = IERC20(0xd586E7F844cEa2F87f50152665BCbc2C279D8d70);
-            } else if (chainId == 10) {
-                // Optimism
-                STABLE = IERC20(0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1);
-            } else if (chainId == 42161) {
-                // Arbitrum
-                STABLE = IERC20(0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1);
-            } else if (chainId == 250) {
-                // Fantom
-                STABLE = IERC20(0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E);
-            } else {
-                revert InvalidValue();
-            }
-        } else {
-            STABLE = IERC20(_STABLEAddress);
-        }
-
-        uint256 underlyingDecimals = ERC20(_underlyingToken).decimals();
-
-        bool success = STABLE.transferFrom(
+        bool success = IERC20(_underlyingToken).transferFrom(
             msg.sender,
             address(this),
-            (_strike * _amount) / 10**(underlyingDecimals)
+            _amount
         );
         if (!success) revert TransferFailed();
+
         amount = _amount;
-
-        if (_underlyingToken == address(0) || _amount == 0) {
-            if (msg.value == 0) revert InsufficientAmount();
-
-            WETH.deposit{value: msg.value}();
-
-            underlyingToken = address(WETH);
-            amount = msg.value;
-        } else {
-            bool success = IERC20(_underlyingToken).transferFrom(
-                msg.sender,
-                address(this),
-                _amount
-            );
-            if (!success) revert TransferFailed();
-            amount = _amount;
-        }
 
         strike = _strike;
 
@@ -173,16 +109,13 @@ contract PutOption {
         if (_durationExerciseAfterExpiration == 0) revert InvalidValue();
         durationExerciseAfterExpiration = _durationExerciseAfterExpiration;
 
-        if (_premiumToken == address(0)) {
-            premiumToken = address(WETH);
-        } else {
-            premiumToken = _premiumToken;
-        }
-
+        premiumToken = _premiumToken;
         premium = _premium;
 
         if (_auctionDeadline >= _expiration) revert InvalidValue();
         auctionDeadline = _auctionDeadline;
+
+        STABLE = IERC20(_STABLEAddress);
 
         writer = msg.sender;
 
@@ -336,32 +269,6 @@ contract PutOption {
         optionState = OptionState.Expired;
     }
 
-    /*
-     *
-     * Utility functions
-     *
-     */
-
-    /// @notice give x amount of native currency, and receive x amount of wrapped native currency
-    function wrapToken() external payable {
-        WETH.deposit{value: msg.value}();
-
-        bool success = WETH.transfer(msg.sender, msg.value);
-        if (!success) revert TransferFailed();
-    }
-
-    /// @notice give x amount of wrapped native currency, and receive x amount of native currency
-    /// @param _amount wrapped native currency amount to swap
-    function unWrapToken(uint256 _amount) external {
-        bool success = WETH.transferFrom(msg.sender, address(this), _amount);
-        if (!success) revert TransferFailed();
-
-        WETH.withdraw(_amount);
-
-        (success, ) = payable(msg.sender).call{value: _amount}("");
-        if (!success) revert TransferFailed();
-    }
-
     /// @notice return all the properties of that option
     /// @notice it prevents having to make multiple calls
     /// @dev doesn't include the bidders and bids array/map
@@ -381,7 +288,6 @@ contract PutOption {
             address,
             address,
             OptionState,
-            address,
             address
         )
     {
@@ -396,8 +302,8 @@ contract PutOption {
 
             for {
 
-            } lt(i, 0x1A0) {
-                // 0x1A0 == 416 == number of slots (= variables stored) * 32 bytes == 13 * 32
+            } lt(i, 0x180) {
+                // 0x180 == 384 == number of slots (= variables stored) * 32 bytes == 12 * 32
                 i := add(i, 0x20)
                 j := add(j, 0x01)
             } {
@@ -407,7 +313,7 @@ contract PutOption {
                 ) // underlyingToken.slot == 0
             }
 
-            return(freeMemPointer, i) // i == 0x1A0 == add(add(freeMemPointer, i), 0x20)
+            return(freeMemPointer, i) // i == 0x180 == add(add(freeMemPointer, i), 0x20)
         }
 
         /* The assembly code above is the equivalent of :
@@ -424,7 +330,6 @@ contract PutOption {
             writer,
             buyer,
             optionState,
-            address(WETH),
             address(STABLE)
         ); */
     }
