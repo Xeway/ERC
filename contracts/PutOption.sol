@@ -75,7 +75,7 @@ contract PutOption {
         uint256 _premium,
         uint256 _auctionDeadline,
         address _STABLEAddress
-    ) payable {
+    ) {
         // the underlying token and the stablecoin cannot be the same
         if (
             _underlyingToken == _STABLEAddress && _underlyingToken != address(0)
@@ -92,10 +92,18 @@ contract PutOption {
             revert InvalidValue();
         }
 
-        bool success = IERC20(_underlyingToken).transferFrom(
+        if (_expiration <= block.timestamp) revert InvalidValue();
+        if (_durationExerciseAfterExpiration == 0) revert InvalidValue();
+        if (_auctionDeadline >= _expiration) revert InvalidValue();
+
+        STABLE = IERC20(_STABLEAddress);
+
+        uint256 underlyingDecimals = ERC20(_underlyingToken).decimals();
+
+        bool success = STABLE.transferFrom(
             msg.sender,
             address(this),
-            _amount
+            (_strike * _amount) / 10**(underlyingDecimals)
         );
         if (!success) revert TransferFailed();
 
@@ -103,19 +111,14 @@ contract PutOption {
 
         strike = _strike;
 
-        if (_expiration <= block.timestamp) revert InvalidValue();
         expiration = _expiration;
 
-        if (_durationExerciseAfterExpiration == 0) revert InvalidValue();
         durationExerciseAfterExpiration = _durationExerciseAfterExpiration;
 
         premiumToken = _premiumToken;
         premium = _premium;
 
-        if (_auctionDeadline >= _expiration) revert InvalidValue();
         auctionDeadline = _auctionDeadline;
-
-        STABLE = IERC20(_STABLEAddress);
 
         writer = msg.sender;
 

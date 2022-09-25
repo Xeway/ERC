@@ -75,7 +75,7 @@ contract CallOption {
         uint256 _premium,
         uint256 _auctionDeadline,
         address _STABLEAddress
-    ) payable {
+    ) {
         // the underlying token and the stablecoin cannot be the same
         if (
             _underlyingToken == _STABLEAddress && _underlyingToken != address(0)
@@ -92,6 +92,10 @@ contract CallOption {
             revert InvalidValue();
         }
 
+        if (_expiration <= block.timestamp) revert InvalidValue();
+        if (_durationExerciseAfterExpiration == 0) revert InvalidValue();
+        if (_auctionDeadline >= _expiration) revert InvalidValue();
+
         bool success = IERC20(_underlyingToken).transferFrom(
             msg.sender,
             address(this),
@@ -103,16 +107,13 @@ contract CallOption {
 
         strike = _strike;
 
-        if (_expiration <= block.timestamp) revert InvalidValue();
         expiration = _expiration;
 
-        if (_durationExerciseAfterExpiration == 0) revert InvalidValue();
         durationExerciseAfterExpiration = _durationExerciseAfterExpiration;
 
         premiumToken = _premiumToken;
         premium = _premium;
 
-        if (_auctionDeadline >= _expiration) revert InvalidValue();
         auctionDeadline = _auctionDeadline;
 
         STABLE = IERC20(_STABLEAddress);
