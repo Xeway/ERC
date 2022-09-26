@@ -210,7 +210,7 @@ contract PutOption {
         optionState = OptionState.Bought;
     }
 
-    /// @notice buyer exercise his option = receive the x amount of underlyingToken
+    /// @notice buyer exercise his option = sell the x amount of underlyingToken
     function exerciseOption() external {
         if (optionState != OptionState.Bought) revert Forbidden();
 
@@ -229,16 +229,19 @@ contract PutOption {
 
         uint256 m_amount = amount;
 
-        // buyer give buy the undelying asset at price `strike`
-        bool success = STABLE.transferFrom(
+        // buyer sell the underlying asset to writer
+        bool success = IERC20(m_underlyingToken).transferFrom(
             msg.sender,
             writer,
-            (strike * m_amount) / 10**(underlyingDecimals)
+            m_amount
         );
         if (!success) revert TransferFailed();
 
-        // transfer funds to buyer
-        success = IERC20(m_underlyingToken).transfer(msg.sender, m_amount);
+        // transfer compensation to option buyer
+        success = STABLE.transfer(
+            msg.sender,
+            (strike * m_amount) / 10**(underlyingDecimals)
+        );
         if (!success) revert TransferFailed();
 
         optionState = OptionState.Exercised;
