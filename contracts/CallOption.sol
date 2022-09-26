@@ -208,7 +208,7 @@ contract CallOption {
         optionState = OptionState.Bought;
     }
 
-    /// @notice buyer exercise his option = receive the x amount of underlyingToken
+    /// @notice buyer exercise his option = buy the x amount of underlyingToken
     function exerciseOption() external {
         if (optionState != OptionState.Bought) revert Forbidden();
 
@@ -227,7 +227,7 @@ contract CallOption {
 
         uint256 m_amount = amount;
 
-        // buyer give buy the undelying asset at price `strike`
+        // buyer buy the undelying asset to writer
         bool success = STABLE.transferFrom(
             msg.sender,
             writer,
@@ -235,7 +235,7 @@ contract CallOption {
         );
         if (!success) revert TransferFailed();
 
-        // transfer funds to buyer
+        // transfer compensation to option buyer
         success = IERC20(m_underlyingToken).transfer(msg.sender, m_amount);
         if (!success) revert TransferFailed();
 
