@@ -37,6 +37,12 @@ contract PutOption {
     /// @dev the price proposals must be > premium
     uint256 public immutable auctionDeadline;
 
+    enum OptionType {
+        European,
+        American
+    }
+    OptionType public optionType;
+
     address public writer;
     address public buyer;
 
@@ -46,7 +52,6 @@ contract PutOption {
         Exercised,
         Expired
     }
-
     OptionState public optionState;
 
     /// @notice stable coin used to pay to the writer when buyer exercise option
@@ -54,7 +59,7 @@ contract PutOption {
     IERC20 public STABLE;
 
     /// @notice bids keep track of all the bids for each bidders
-    mapping(address => uint256) public bids;
+    mapping(address => uint256) bids;
     /// @dev bidders used to loop over bids
     address[] bidders;
 
@@ -74,7 +79,8 @@ contract PutOption {
         address _premiumToken,
         uint256 _premium,
         uint256 _auctionDeadline,
-        address _STABLEAddress
+        address _STABLEAddress,
+        OptionType _optionType
     ) {
         // the underlying token and the stablecoin cannot be the same
         if (
@@ -119,6 +125,8 @@ contract PutOption {
         premium = _premium;
 
         auctionDeadline = _auctionDeadline;
+
+        optionType = _optionType;
 
         writer = msg.sender;
 
@@ -196,7 +204,7 @@ contract PutOption {
         if (buyer != address(0)) revert Forbidden();
 
         if (auctionDeadline > 0) revert Forbidden();
-        if (block.timestamp >= expiration) revert Forbidden();
+        if (block.timestamp > expiration) revert Forbidden();
 
         bool success = IERC20(premiumToken).transferFrom(
             msg.sender,
@@ -218,7 +226,9 @@ contract PutOption {
 
         uint256 m_expiration = expiration;
 
-        if (block.timestamp > m_expiration) revert Expired();
+        if (optionType == OptionType.European) {
+            if (block.timestamp <= m_expiration) revert Expired();
+        }
         if (block.timestamp <= auctionDeadline) revert Forbidden();
         if (block.timestamp > m_expiration + durationExerciseAfterExpiration)
             revert Forbidden();
@@ -257,9 +267,7 @@ contract PutOption {
             m_optionState != OptionState.Created
         ) revert Forbidden();
 
-        address m_writer = writer;
-
-        if (msg.sender != m_writer) revert Forbidden();
+        if (msg.sender != writer) revert Forbidden();
 
         // if no one bought this option, the writer can retrieve their tokens as soon as it expires
         if (m_optionState == OptionState.Created) {
@@ -269,7 +277,7 @@ contract PutOption {
                 revert Forbidden();
         }
 
-        bool success = IERC20(underlyingToken).transfer(m_writer, amount);
+        bool success = IERC20(underlyingToken).transfer(msg.sender, amount);
         if (!success) revert TransferFailed();
 
         optionState = OptionState.Expired;
