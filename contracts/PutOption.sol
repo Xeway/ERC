@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./Option.sol";
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract PutOption {
+contract PutOption is Option {
     /// @notice underlyingToken the underlying token
     /// @dev if underlyingToken == address(0), native currency is the underlying asset
     address public underlyingToken;
