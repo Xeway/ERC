@@ -109,32 +109,6 @@ contract PutOption is Option {
         optionState = OptionState.Exercised;
     }
 
-    /// @notice if buyer hasn't exercised his option during the period 'durationExerciseAfterExpiration',
-    /// writer can retrieve their funds
-    function retrieveExpiredTokens() external {
-        OptionState m_optionState = optionState;
-
-        if (
-            m_optionState != OptionState.Bought &&
-            m_optionState != OptionState.Created
-        ) revert Forbidden();
-
-        if (msg.sender != writer) revert Forbidden();
-
-        // if no one bought this option, the writer can retrieve their tokens as soon as it expires
-        if (m_optionState == OptionState.Created) {
-            if (block.timestamp <= expiration) revert Forbidden();
-        } else {
-            if (block.timestamp <= expiration + durationExerciseAfterExpiration)
-                revert Forbidden();
-        }
-
-        bool success = IERC20(underlyingToken).transfer(msg.sender, amount);
-        if (!success) revert TransferFailed();
-
-        optionState = OptionState.Expired;
-    }
-
     /// @notice return all the properties of that option
     /// @notice it prevents having to make multiple calls
     /// @dev doesn't include the bidders and bids array/map
