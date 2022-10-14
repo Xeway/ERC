@@ -196,6 +196,7 @@ abstract contract Option {
             address,
             uint256,
             uint256,
+            OptionType,
             address,
             address,
             OptionState,
@@ -213,8 +214,8 @@ abstract contract Option {
 
             for {
 
-            } lt(i, 0x180) {
-                // 0x180 == 384 == number of slots (= variables stored) * 32 bytes == 12 * 32
+            } lt(i, 0x1A0) {
+                // 0x1A0 == 416 == number of slots (= variables stored) * 32 bytes == 13 * 32
                 i := add(i, 0x20)
                 j := add(j, 0x01)
             } {
@@ -224,11 +225,10 @@ abstract contract Option {
                 ) // underlyingToken.slot == 0
             }
 
-            return(freeMemPointer, i) // i == 0x180 == add(add(freeMemPointer, i), 0x20)
+            return(freeMemPointer, i) // i == 0x1A0 == add(add(freeMemPointer, i), 0x20)
         }
 
         /* The assembly code above is the equivalent of :
-
         return (
             underlyingToken,
             amount,
@@ -238,6 +238,7 @@ abstract contract Option {
             premiumToken,
             premium,
             auctionDeadline,
+            optionType,
             writer,
             buyer,
             optionState,
