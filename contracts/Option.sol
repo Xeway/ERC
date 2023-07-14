@@ -245,4 +245,6 @@ abstract contract Option {
             address(STABLE)
         ); */
     }
+
+    function exerciseOption() external virtual;
 }

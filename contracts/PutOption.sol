@@ -71,7 +71,7 @@ contract PutOption is Option {
     }
 
     /// @notice buyer exercise his option = sell the x amount of underlyingToken
-    function exerciseOption() external {
+    function exerciseOption() external override {
         if (optionState != OptionState.Bought) revert Forbidden();
 
         if (msg.sender != buyer) revert Forbidden();
