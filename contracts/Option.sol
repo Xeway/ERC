@@ -5,50 +5,50 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 abstract contract Option is Ownable {
-    /// @notice underlyingToken the underlying token
-    IERC20 public underlyingToken;
+    /// @notice _underlyingToken the underlying token
+    IERC20 internal _underlyingToken;
 
-    /// @notice amount the amount of the underlying asset (be aware of token decimals!)
-    uint256 public amount;
+    /// @notice _amount the amount of the underlying asset (be aware of token decimals!)
+    uint256 internal _amount;
 
-    /// @notice quoteToken token used to pay the writer when buyer exercise option
-    /// @dev buyer will pay amount * strike
-    IERC20 public quoteToken;
+    /// @notice _quoteToken token used to pay the writer when buyer exercise option
+    /// @dev buyer will pay _amount * _strike
+    IERC20 internal _quoteToken;
 
-    /// @notice strike price determined in the quoteToken currency (be aware of token decimals!)
-    uint256 public strike;
+    /// @notice _strike price determined in the _quoteToken currency (be aware of token decimals!)
+    uint256 internal _strike;
 
-    /// @notice expiration in seconds (date)
+    /// @notice _expiration in seconds (date)
     /// @dev must be under the same format as block.timestamp
-    uint256 public expiration;
+    uint256 internal _expiration;
 
-    /// @notice durationExerciseAfterExpiration the duration the buyer can exercise his option (duration)
+    /// @notice _durationExerciseAfterExpiration the duration the buyer can exercise his option (duration)
     /// @dev must be under the same format as block.timestamp
-    uint256 public durationExerciseAfterExpiration;
+    uint256 internal _durationExerciseAfterExpiration;
 
-    /// @notice premiumToken the token the premium has to be paid
-    IERC20 public premiumToken;
+    /// @notice _premiumToken the token the premium has to be paid
+    IERC20 internal _premiumToken;
 
-    /// @notice premium price (be aware of token decimals!)
-    uint256 public premium;
+    /// @notice _premium price (be aware of token decimals!)
+    uint256 internal _premium;
 
-    enum OptionType {
+    enum Type {
         European,
         American
     }
-    OptionType public optionType;
+    Type internal _type;
 
-    address public writer;
-    address public buyer;
+    address internal _writer;
+    address internal _buyer;
 
-    enum OptionState {
+    enum State {
         Created,
         Bought,
         Exercised,
         Expired,
         Canceled
     }
-    OptionState public optionState;
+    State internal _state;
 
     error TransferFailed();
     error InsufficientAmount();
@@ -59,43 +59,91 @@ abstract contract Option is Ownable {
 
     /// @notice buy option and give premium to writer
     function buy() external {
-        if (optionState != OptionState.Created) revert Forbidden();
-        if (block.timestamp > expiration) revert Forbidden();
+        if (_state != State.Created) revert Forbidden();
+        if (block.timestamp > _expiration) revert Forbidden();
 
-        bool success = premiumToken.transferFrom(
+        bool success = _premiumToken.transferFrom(
             msg.sender,
-            writer,
-            premium
+            _writer,
+            _premium
         );
         if (!success) revert TransferFailed();
 
-        buyer = msg.sender;
-        optionState = OptionState.Bought;
+        _buyer = msg.sender;
+        _state = State.Bought;
     }
 
-    /// @notice if buyer hasn't exercised his option during the period 'durationExerciseAfterExpiration', writer can retrieve its funds
+    /// @notice if buyer hasn't exercised his option during the _durationExerciseAfterExpiration period, writer can retrieve its funds
     function retrieveExpiredTokens() external onlyOwner {
-        if (optionState != OptionState.Bought) revert Forbidden();
+        if (_state != State.Bought) revert Forbidden();
 
-        if (block.timestamp <= expiration + durationExerciseAfterExpiration) revert Forbidden();
+        if (block.timestamp <= _expiration + _durationExerciseAfterExpiration) revert Forbidden();
 
         _sendUnderlyingTokenToWriter();
 
-        optionState = OptionState.Expired;
+        _state = State.Expired;
     }
 
     /// @notice possibility to cancel the option and retrieve collateralized funds while no one bought the option
     function cancel() external onlyOwner {
-        if (optionState != OptionState.Created) revert Forbidden();
+        if (_state != State.Created) revert Forbidden();
 
         _sendUnderlyingTokenToWriter();
 
-        optionState = OptionState.Canceled;
+        _state = State.Canceled;
     }
 
     function _sendUnderlyingTokenToWriter() internal {
-        bool success = IERC20(underlyingToken).transfer(msg.sender, amount);
+        bool success = IERC20(_underlyingToken).transfer(msg.sender, _amount);
         if (!success) revert TransferFailed();
+    }
+
+    function underlyingToken() external view returns (address) {
+        return address(_underlyingToken);
+    }
+
+    function amount() external view returns (uint256) {
+        return _amount;
+    }
+
+    function quoteToken() external view returns (address) {
+        return address(_quoteToken);
+    }
+
+    function strike() external view returns (uint256) {
+        return _strike;
+    }
+
+    function expiration() external view returns (uint256) {
+        return _expiration;
+    }
+
+    function durationExerciseAfterExpiration() external view returns (uint256) {
+        return _durationExerciseAfterExpiration;
+    }
+
+    function premiumToken() external view returns (address) {
+        return address(_premiumToken);
+    }
+
+    function premium() external view returns (uint256) {
+        return _premium;
+    }
+
+    function type() external view returns (Type) {
+        return _type;
+    }
+
+    function writer() external view returns (address) {
+        return _writer;
+    }
+
+    function buyer() external view returns (address) {
+        return _buyer;
+    }
+
+    function state() external view returns (State) {
+        return _state;
     }
 
     /// @notice return all the properties of that option
@@ -114,10 +162,10 @@ abstract contract Option is Ownable {
             uint256,
             address,
             uint256,
-            OptionType,
+            Type,
             address,
             address,
-            OptionState
+            State
         )
     {
         assembly {
@@ -126,7 +174,7 @@ abstract contract Option is Ownable {
             let i := 0x20
             let j := 0x01
 
-            let firstSlot := underlyingToken.slot // == 0
+            let firstSlot := _underlyingToken.slot // == 0
 
             // first mstore not in the loop, more gas efficient because it avoids using add()
             mstore(freeMemPointer, sload(firstSlot))
@@ -149,20 +197,20 @@ abstract contract Option is Ownable {
 
         /* The assembly code above is the equivalent of :
         return (
-            underlyingToken,
-            amount,
-            quoteToken,
-            strike,
-            expiration,
-            durationExerciseAfterExpiration,
-            premiumToken,
-            premium,
-            optionType,
-            writer,
-            buyer,
-            optionState
+            _underlyingToken,
+            _amount,
+            _quoteToken,
+            _strike,
+            _expiration,
+            _durationExerciseAfterExpiration,
+            _premiumToken,
+            _premium,
+            _type,
+            _writer,
+            _buyer,
+            _state
         ); */
     }
 
-    function exerciseOption() external virtual;
+    function exercise() external virtual;
 }
