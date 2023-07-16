@@ -130,7 +130,7 @@ abstract contract Option is Ownable {
         return _premium;
     }
 
-    function type() external view returns (Type) {
+    function getType() external view returns (Type) {
         return _type;
     }
 
