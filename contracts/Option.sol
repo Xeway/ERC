@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 contract Option is Ownable {
+    //                  //
+    //    ATTRIBUTES    //
+    //                  //
+
     enum Side {
         Call,
         Put
@@ -56,12 +60,20 @@ contract Option is Ownable {
     }
     State internal _state;
 
+    //                  //
+    //      ERRORS      //
+    //                  //
+
     error TransferFailed();
     error InsufficientAmount();
     error InvalidValue();
     error Expired();
     error NotExpired();
     error Forbidden();
+
+    //                  //
+    //   CONSTRUCTOR    //
+    //                  //
 
     constructor (
         Side side_,
@@ -113,6 +125,10 @@ contract Option is Ownable {
         _state = State.Created;
     }
 
+    //                  //
+    // PUBLIC FUNCTIONS //
+    //                  //
+
     /// @notice buy option and give premium to writer
     function buy() external {
         if (_state != State.Created) revert Forbidden();
@@ -134,15 +150,15 @@ contract Option is Ownable {
     /// @notice buyer exercise his option
     /// @notice if option is a call : buy _amount of _underlyingToken
     /// @notice if option is a put : sell _amount of _underlyingToken
-    function exercise() external onlyBuyer {
+    function exercise() external {
+        if (_buyer != _msgSender()) revert Forbidden();
+
         if (_state != State.Bought) revert Forbidden();
 
-        uint256 m_expiration = _expiration;
-
-        if (_type == Type.European && block.timestamp <= m_expiration) {
+        if (_type == Type.European && block.timestamp <= _expiration) {
             revert Forbidden();
         }
-        if (block.timestamp > m_expiration + _durationExerciseAfterExpiration) {
+        if (block.timestamp > _expiration + _durationExerciseAfterExpiration) {
             revert Expired();
         }
 
@@ -189,6 +205,10 @@ contract Option is Ownable {
         _state = State.Canceled;
     }
 
+    //                   //
+    // PRIVATE FUNCTIONS //
+    //                   //
+
     function _transfer(IERC20 token_, address to_, uint256 amount_) internal {
         bool success = token_.transfer(to_, amount_);
         if (!success) revert TransferFailed();
@@ -198,6 +218,10 @@ contract Option is Ownable {
         bool success = token_.transferFrom(from_, to_, amount_);
         if (!success) revert TransferFailed();
     }
+
+    //                  //
+    //      GETTERS     //
+    //                  //
 
     function side() external view returns (Side) {
         return _side;
@@ -249,75 +273,5 @@ contract Option is Ownable {
 
     function state() external view returns (State) {
         return _state;
-    }
-
-    /// @notice return all the properties of that option
-    /// @notice it prevents having to make multiple calls
-    /// @dev doesn't include the bidders and bids array/map
-    /// @dev it's using inline assembly for gas efficiency purpose, so the code is not very flexible
-    function specs()
-        external
-        view
-        returns (
-            address,
-            Side,
-            address,
-            uint256,
-            address,
-            uint256,
-            uint256,
-            uint256,
-            address,
-            uint256,
-            Type,
-            address,
-            State
-        )
-    {
-        assembly {
-            let freeMemPointer := mload(0x40)
-
-            let i := 0x20
-            let j := 0x01
-
-            let firstSlot := 0 // _owner.slot in Ownable
-
-            // first mstore not in the loop, more gas efficient because it avoids using add()
-            mstore(freeMemPointer, sload(firstSlot))
-
-            for {} lt(i, 0x1A0) {
-                // 0x1A0 == 416 == number of slots (= variables stored) * 32 bytes == 13 * 32
-                i := add(i, 0x20)
-                j := add(j, 0x01)
-            } {
-                mstore(
-                    add(freeMemPointer, i),
-                    sload(add(firstSlot, j))
-                )
-            }
-
-            return(freeMemPointer, i) // i == 0x1A0 == add(add(freeMemPointer, i), 0x20)
-        }
-
-        /* The assembly code above is the equivalent of :
-        return (
-            owner(),
-            _underlyingToken,
-            _amount,
-            _quoteToken,
-            _strike,
-            _expiration,
-            _durationExerciseAfterExpiration,
-            _premiumToken,
-            _premium,
-            _type,
-            _buyer,
-            _state
-        ); */
-    }
-
-    modifier onlyBuyer() {
-        if (_buyer != _msgSender()) revert Forbidden();
-        _;
     }
 }
