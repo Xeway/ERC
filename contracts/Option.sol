@@ -61,14 +61,16 @@ abstract contract Option is Ownable {
         if (_state != State.Created) revert Forbidden();
         if (block.timestamp > _expiration) revert Forbidden();
 
-        bool success = _premiumToken.transferFrom(
-            msg.sender,
-            owner(),
-            _premium
-        );
-        if (!success) revert TransferFailed();
+        if (_premium > 0 && address(_premiumToken) != address(0)) {
+            bool success = _premiumToken.transferFrom(
+                _msgSender(),
+                owner(),
+                _premium
+            );
+            if (!success) revert TransferFailed();
+        }
 
-        _buyer = msg.sender;
+        _buyer = _msgSender();
         _state = State.Bought;
     }
 
@@ -76,7 +78,7 @@ abstract contract Option is Ownable {
     function retrieveExpiredTokens() external onlyOwner {
         if (_state != State.Bought) revert Forbidden();
 
-        if (block.timestamp <= _expiration + _durationExerciseAfterExpiration) revert Forbidden();
+        if (block.timestamp <= _expiration + _durationExerciseAfterExpiration) revert NotExpired();
 
         _sendUnderlyingTokenToWriter();
 
@@ -93,7 +95,7 @@ abstract contract Option is Ownable {
     }
 
     function _sendUnderlyingTokenToWriter() internal {
-        bool success = IERC20(_underlyingToken).transfer(msg.sender, _amount);
+        bool success = IERC20(_underlyingToken).transfer(_msgSender(), _amount);
         if (!success) revert TransferFailed();
     }
 
@@ -212,4 +214,9 @@ abstract contract Option is Ownable {
     }
 
     function exercise() external virtual;
+
+    modifier onlyBuyer() {
+        if (_buyer != _msgSender()) revert Forbidden();
+        _;
+    }
 }
