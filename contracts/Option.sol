@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20Metadata as IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 abstract contract Option is Ownable {
@@ -109,7 +108,7 @@ abstract contract Option is Ownable {
         if (side_ == Side.Call) {
             _transferFrom(IERC20(underlyingToken_), _msgSender(), address(this), amount_);
         } else if (side_ == Side.Put) {
-            uint256 underlyingDecimals = ERC20(underlyingToken_).decimals();
+            uint256 underlyingDecimals = IERC20(underlyingToken_).decimals();
             _transferFrom(IERC20(quoteToken_), _msgSender(), address(this), (strike_ * amount_) / 10**(underlyingDecimals));
         }
 
@@ -175,7 +174,7 @@ abstract contract Option is Ownable {
 
         IERC20 m_underlyingToken = _underlyingToken;
 
-        uint256 underlyingDecimals = ERC20(address(m_underlyingToken)).decimals();
+        uint256 underlyingDecimals = IERC20(address(m_underlyingToken)).decimals();
 
         uint256 m_amount = _amount;
 

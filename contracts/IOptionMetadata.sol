@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {IOption} from "./IOption.sol";
 import {Option} from  "./Option.sol";
 
-interface IOptionMetadata {
+interface IOptionMetadata is IOption {
     function side() external view returns (Option.Side);
 
     function underlyingToken() external view returns (address);
