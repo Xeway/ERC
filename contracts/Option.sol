@@ -38,7 +38,6 @@ abstract contract Option is Ownable {
     }
     Type internal _type;
 
-    address internal _writer;
     address internal _buyer;
 
     enum State {
@@ -64,7 +63,7 @@ abstract contract Option is Ownable {
 
         bool success = _premiumToken.transferFrom(
             msg.sender,
-            _writer,
+            owner(),
             _premium
         );
         if (!success) revert TransferFailed();
@@ -135,7 +134,7 @@ abstract contract Option is Ownable {
     }
 
     function writer() external view returns (address) {
-        return _writer;
+        return owner();
     }
 
     function buyer() external view returns (address) {
@@ -155,6 +154,7 @@ abstract contract Option is Ownable {
         view
         returns (
             address,
+            address,
             uint256,
             address,
             uint256,
@@ -163,7 +163,6 @@ abstract contract Option is Ownable {
             address,
             uint256,
             Type,
-            address,
             address,
             State
         )
@@ -174,7 +173,7 @@ abstract contract Option is Ownable {
             let i := 0x20
             let j := 0x01
 
-            let firstSlot := _underlyingToken.slot // == 0
+            let firstSlot := 0 // _owner.slot in Ownable
 
             // first mstore not in the loop, more gas efficient because it avoids using add()
             mstore(freeMemPointer, sload(firstSlot))
@@ -197,6 +196,7 @@ abstract contract Option is Ownable {
 
         /* The assembly code above is the equivalent of :
         return (
+            owner(),
             _underlyingToken,
             _amount,
             _quoteToken,
@@ -206,7 +206,6 @@ abstract contract Option is Ownable {
             _premiumToken,
             _premium,
             _type,
-            _writer,
             _buyer,
             _state
         ); */
