@@ -255,11 +255,12 @@ contract Option is Ownable {
     /// @notice it prevents having to make multiple calls
     /// @dev doesn't include the bidders and bids array/map
     /// @dev it's using inline assembly for gas efficiency purpose, so the code is not very flexible
-    function getFullProperties()
+    function specs()
         external
         view
         returns (
             address,
+            Side,
             address,
             uint256,
             address,
@@ -284,10 +285,8 @@ contract Option is Ownable {
             // first mstore not in the loop, more gas efficient because it avoids using add()
             mstore(freeMemPointer, sload(firstSlot))
 
-            for {
-
-            } lt(i, 0x180) {
-                // 0x180 == 384 == number of slots (= variables stored) * 32 bytes == 12 * 32
+            for {} lt(i, 0x1A0) {
+                // 0x1A0 == 416 == number of slots (= variables stored) * 32 bytes == 13 * 32
                 i := add(i, 0x20)
                 j := add(j, 0x01)
             } {
@@ -297,7 +296,7 @@ contract Option is Ownable {
                 )
             }
 
-            return(freeMemPointer, i) // i == 0x180 == add(add(freeMemPointer, i), 0x20)
+            return(freeMemPointer, i) // i == 0x1A0 == add(add(freeMemPointer, i), 0x20)
         }
 
         /* The assembly code above is the equivalent of :
