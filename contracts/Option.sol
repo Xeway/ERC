@@ -61,13 +61,20 @@ contract Option is Ownable {
     State internal _state;
 
     //                  //
+    //      EVENTS      //
+    //                  //
+
+    event Bought(address indexed buyer, uint256 timestamp);
+    event Exercised(uint256 timestamp);
+    event Expired(uint256 timestamp);
+    event Canceled(uint256 timestamp);
+
+    //                  //
     //      ERRORS      //
     //                  //
 
     error TransferFailed();
-    error InsufficientAmount();
     error InvalidValue();
-    error Expired();
     error NotExpired();
     error Forbidden();
 
@@ -145,6 +152,8 @@ contract Option is Ownable {
 
         _buyer = _msgSender();
         _state = State.Bought;
+        
+        emit Bought(_msgSender(), block.timestamp);
     }
 
     /// @notice buyer exercise his option
@@ -159,7 +168,7 @@ contract Option is Ownable {
             revert Forbidden();
         }
         if (block.timestamp > _expiration + _durationExerciseAfterExpiration) {
-            revert Expired();
+            revert Forbidden();
         }
 
         IERC20 m_underlyingToken = _underlyingToken;
@@ -183,6 +192,8 @@ contract Option is Ownable {
         }
 
         _state = State.Exercised;
+
+        emit Exercised(block.timestamp);
     }
 
     /// @notice if buyer hasn't exercised his option during the _durationExerciseAfterExpiration period, writer can retrieve its funds
@@ -194,6 +205,8 @@ contract Option is Ownable {
         _transfer(_underlyingToken, _msgSender(), _amount);
 
         _state = State.Expired;
+
+        emit Expired(block.timestamp);
     }
 
     /// @notice possibility to cancel the option and retrieve collateralized funds while no one bought the option
@@ -203,6 +216,8 @@ contract Option is Ownable {
         _transfer(_underlyingToken, _msgSender(), _amount);
 
         _state = State.Canceled;
+
+        emit Canceled(block.timestamp);
     }
 
     //                   //
