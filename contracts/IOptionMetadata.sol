@@ -11,7 +11,7 @@ interface IOptionMetadata is IOption {
 
     function amount() external view returns (uint256);
 
-    function quoteToken() external view returns (address);
+    function strikeToken() external view returns (address);
 
     function strike() external view returns (uint256);
 

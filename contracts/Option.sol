@@ -21,11 +21,11 @@ abstract contract Option is Ownable {
     /// @notice _amount the amount of the underlying asset (be aware of token decimals!)
     uint256 private _amount;
 
-    /// @notice _quoteToken token used to pay the writer when buyer exercise option
+    /// @notice _strikeToken token used to pay the writer when buyer exercise option
     /// @dev buyer will pay _amount * _strike
-    IERC20 private _quoteToken;
+    IERC20 private _strikeToken;
 
-    /// @notice _strike price determined in the _quoteToken currency (be aware of token decimals!)
+    /// @notice _strike price determined in the _strikeToken currency (be aware of token decimals!)
     uint256 private _strike;
 
     /// @notice _expiration in seconds (date)
@@ -85,7 +85,7 @@ abstract contract Option is Ownable {
         Side side_,
         address underlyingToken_,
         uint256 amount_,
-        address quoteToken_,
+        address strikeToken_,
         uint256 strike_,
         uint256 expiration_,
         uint256 durationExerciseAfterExpiration_,
@@ -96,11 +96,11 @@ abstract contract Option is Ownable {
         if (
             underlyingToken_ == address(0) ||
             amount_ == 0 ||
-            quoteToken_ == address(0) ||
+            strikeToken_ == address(0) ||
             strike_ == 0 ||
             expiration_ <= block.timestamp ||
             durationExerciseAfterExpiration_ == 0 ||
-            underlyingToken_ == quoteToken_ // the underlying token and the stablecoin cannot be the same
+            underlyingToken_ == strikeToken_ // the underlying token and the stablecoin cannot be the same
         ) {
             revert InvalidValue();
         }
@@ -109,7 +109,7 @@ abstract contract Option is Ownable {
             _transferFrom(IERC20(underlyingToken_), _msgSender(), address(this), amount_);
         } else {
             uint256 underlyingDecimals = IERC20(underlyingToken_).decimals();
-            _transferFrom(IERC20(quoteToken_), _msgSender(), address(this), (strike_ * amount_) / 10**(underlyingDecimals));
+            _transferFrom(IERC20(strikeToken_), _msgSender(), address(this), (strike_ * amount_) / 10**(underlyingDecimals));
         }
 
         _side = side_;
@@ -117,7 +117,7 @@ abstract contract Option is Ownable {
         _underlyingToken = IERC20(underlyingToken_);
         _amount = amount_;
 
-        _quoteToken = IERC20(quoteToken_);
+        _strikeToken = IERC20(strikeToken_);
         _strike = strike_;
 
         _expiration = expiration_;
@@ -180,7 +180,7 @@ abstract contract Option is Ownable {
 
         if (_side == Side.Call) {
             // buyer pay writer for the underlying token(s) at strike price
-            _transferFrom(_quoteToken, _msgSender(), owner(), (_strike * m_amount) / 10**(underlyingDecimals));
+            _transferFrom(_strikeToken, _msgSender(), owner(), (_strike * m_amount) / 10**(underlyingDecimals));
 
             // transfer underlying token(s) to buyer
             _transfer(m_underlyingToken, _msgSender(), m_amount);
@@ -189,7 +189,7 @@ abstract contract Option is Ownable {
             _transferFrom(m_underlyingToken, _msgSender(), owner(), m_amount);
 
             // pay buyer at strike price
-            _transfer(_quoteToken, _msgSender(), (_strike * m_amount) / 10**(underlyingDecimals));
+            _transfer(_strikeToken, _msgSender(), (_strike * m_amount) / 10**(underlyingDecimals));
         }
 
         _state = State.Exercised;
@@ -257,8 +257,8 @@ abstract contract Option is Ownable {
         return _amount;
     }
 
-    function quoteToken() public view virtual returns (address) {
-        return address(_quoteToken);
+    function strikeToken() public view virtual returns (address) {
+        return address(_strikeToken);
     }
 
     function strike() public view virtual returns (uint256) {
