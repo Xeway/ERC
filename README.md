@@ -245,13 +245,16 @@ Alice for its part, has to allow the spending of his 10 DAI by calling `approve(
 Then, she can execute `buy` on the contract in order to buy the option.
 
 We're the 15th of July, and Alice has very interest to exercise his option because 1 LINK is traded at 50 USC!\
-So to exercise, she just has to call `exercise` on the contract, and that's it! Bob receives 200 USDC (8 LINK \* 25 USDC), and Alice 8 LINK.
+So to exercise, she just has to call `exercise` on the contract, and that's it! Bob receives 200 USDC (8 LINK \* 25 USDC), and Alice 8 LINK.\
 She made a profit of 400 - 200 = 200 USDC!
 
 ## Rationale
 The proposed ERC-Options standard provides a simple yet powerful interface for options contracts on Ethereum. By standardizing the interface, it becomes easier for developers to build applications and platforms that support options trading, and users can seamlessly interact with different options contracts across multiple dApps.
 
 This contract's concept is oracle-free, because we assumed that a rational buyer will exercise his option only if it's profitable for him.
+
+The contract also inherit from OpenZeppelin's `Ownable` contract. Therefore, we decided that the owner of the contract is also the writer.\
+You can change the contract's owner (and so the writer) by calling `transferOwnership`.
 
 ## Security Considerations
 We implemented an additional parameter to the conception called `durationExerciseAfterExpiration`. This gives a determined time range for the buyer to exercise his option. We are conscious that during this time range, price can change, and an option that was not profitable for the buyer at expiration time, can be during this time range. For this reason, we highly advise writers to think and determine carefully each parameter.
