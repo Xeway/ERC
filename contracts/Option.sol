@@ -179,16 +179,16 @@ abstract contract Option is Ownable {
         uint256 m_amount = _amount;
 
         if (_side == Side.Call) {
-            // buyer buy the undelying asset to writer
+            // buyer pay writer for the underlying token(s) at strike price
             _transferFrom(_quoteToken, _msgSender(), owner(), (_strike * m_amount) / 10**(underlyingDecimals));
 
-            // transfer compensation to option buyer
+            // transfer underlying token(s) to buyer
             _transfer(m_underlyingToken, _msgSender(), m_amount);
         } else {
-            // buyer sell the underlying asset to writer
+            // buyer transfer the underlying token(s) to writer
             _transferFrom(m_underlyingToken, _msgSender(), owner(), m_amount);
 
-            // transfer compensation to option buyer
+            // pay buyer at strike price
             _transfer(_quoteToken, _msgSender(), (_strike * m_amount) / 10**(underlyingDecimals));
         }
 
