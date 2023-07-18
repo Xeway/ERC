@@ -107,7 +107,7 @@ abstract contract Option is Ownable {
 
         if (side_ == Side.Call) {
             _transferFrom(IERC20(underlyingToken_), _msgSender(), address(this), amount_);
-        } else if (side_ == Side.Put) {
+        } else {
             uint256 underlyingDecimals = IERC20(underlyingToken_).decimals();
             _transferFrom(IERC20(quoteToken_), _msgSender(), address(this), (strike_ * amount_) / 10**(underlyingDecimals));
         }
@@ -184,7 +184,7 @@ abstract contract Option is Ownable {
 
             // transfer compensation to option buyer
             _transfer(m_underlyingToken, _msgSender(), m_amount);
-        } else if (_side == Side.Put) {
+        } else {
             // buyer sell the underlying asset to writer
             _transferFrom(m_underlyingToken, _msgSender(), owner(), m_amount);
 
