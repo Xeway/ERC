@@ -131,6 +131,8 @@ abstract contract Option is Ownable {
 
     /// @notice writer give the collateral in order to create the option
     function create() public onlyOwner virtual returns (bool) {
+        if (_state != State.Invalid) revert Forbidden();
+
         if (_side == Side.Call) {
             _transferFrom(_underlyingToken, _msgSender(), address(this), _amount);
         } else {
