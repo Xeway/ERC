@@ -50,7 +50,8 @@ abstract contract Option is Ownable {
     address private _buyer;
 
     enum State {
-        Created,
+        Invalid, // at creation's time
+        Created, // when collateral received
         Bought,
         Exercised,
         Expired,
@@ -62,6 +63,7 @@ abstract contract Option is Ownable {
     //      EVENTS      //
     //                  //
 
+    event Created(uint256 timestamp);
     event Bought(address indexed buyer, uint256 timestamp);
     event Exercised(uint256 timestamp);
     event Expired(uint256 timestamp);
@@ -104,13 +106,6 @@ abstract contract Option is Ownable {
             revert InvalidValue();
         }
 
-        if (side_ == Side.Call) {
-            _transferFrom(IERC20(underlyingToken_), _msgSender(), address(this), amount_);
-        } else {
-            uint256 underlyingDecimals = IERC20(underlyingToken_).decimals();
-            _transferFrom(IERC20(strikeToken_), _msgSender(), address(this), (strike_ * amount_) / 10**(underlyingDecimals));
-        }
-
         _side = side_;
 
         _underlyingToken = IERC20(underlyingToken_);
@@ -127,12 +122,28 @@ abstract contract Option is Ownable {
 
         _type = type_;
 
-        _state = State.Created;
+        _state = State.Invalid;
     }
 
     //                  //
     // PUBLIC FUNCTIONS //
     //                  //
+
+    /// @notice writer give the collateral in order to create the option
+    function create() public onlyOwner virtual returns (bool) {
+        if (_side == Side.Call) {
+            _transferFrom(_underlyingToken, _msgSender(), address(this), _amount);
+        } else {
+            uint256 underlyingDecimals = _underlyingToken.decimals();
+            _transferFrom(_strikeToken, _msgSender(), address(this), (_strike * _amount) / 10**(underlyingDecimals));
+        }
+
+        _state = State.Created;
+
+        emit Created(block.timestamp);
+
+        return true;
+    }
 
     /// @notice buy option and give premium to writer
     function buy() public virtual returns (bool) {

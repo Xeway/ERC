@@ -1,7 +1,7 @@
 EIP: <to be assigned>
 Title: ERC-Options: A Standard Interface for Options on the Ethereum Blockchain
 
-Author: Ewan Humbert (@Xeway)
+Author: Ewan Humbert (@Xeway) <xeway@protonmail.com>
 Discussions-To: [Ethereum Magicians](https://ethereum-magicians.org/)
 Status: Draft
 Type: Standards Track
@@ -21,11 +21,13 @@ Options are widely used financial instruments that provide users with the right,
 ### Interface
 ```solidity
 interface IOption {
+    event Created(uint256 timestamp);
     event Bought(address indexed buyer, uint256 timestamp);
     event Exercised(uint256 timestamp);
     event Expired(uint256 timestamp);
     event Canceled(uint256 timestamp);
 
+    function create() external returns (bool);
     function buy() external returns (bool);
     function exercise() external returns (bool);
     function retrieveExpiredTokens() external returns (bool);
@@ -46,6 +48,20 @@ interface IOption {
     function state() external view returns (State);
 }
 ```
+
+### Creation (constructor)
+At creation time, user must provide the following parameters:
+
+- `side`
+- `underlyingToken`
+- `amount`
+- `strikeToken`
+- `strike`
+- `expiration`
+- `durationExerciseAfterExpiration`
+- `premiumToken`
+- `premium`
+- `type`
 
 ### State Variable Descriptions
 #### `side`
@@ -119,9 +135,19 @@ Buyer's address.
 #### `state`
 **Type: `enum`**
 
-State of the option. Can take the value `Created`, `Bought`, `Exercised`, `Expired` or `Canceled`.
+State of the option. Can take the value `Invalid` (at creation), `Created` (when collateral received), `Bought`, `Exercised`, `Expired` or `Canceled`.
 
 ### Function Descriptions
+#### `create`
+```solidity
+function create() external returns (bool);
+```
+Allows the writer to validate the option by transferring the collateral to the contract.\
+
+> Previously, the writer has to allow the spend of amount `strike`/`amount` of token `strikeToken`/`underlyingToken` depending if the option is of type `Call` or `Put`. These funds will go to the contract and will be used as a *<u>collateral</u>* to be sure the necessary tokens are available if the buyer decides to exercise.
+
+*Returns a boolean depending on whether or not the function was successfully executed.*
+
 #### `buy`
 ```solidity
 function buy() external returns (bool);
@@ -151,15 +177,21 @@ Allows the writer to retrieve the token(s) he locked (used as collateral). Write
 
 *Returns a boolean depending on whether or not the function was successfully executed.*
 
-#### `call`
+#### `cancel`
 ```solidity
 function cancel() external returns (bool);
 ```
-Allows the writer to cancel the option and retrieve his/its locked token(s) (used as collateral). Writer can only execute this function if the option hasn't been bought or exercised.
+Allows the writer to cancel the option and retrieve his/its locked token(s) (used as collateral). Writer can only execute this function if the option hasn't been bought or if the option hasn't been exercised and the period `durationExerciseAfterExpiration` happening after `expiration` has passed.
 
 *Returns a boolean depending on whether or not the function was successfully executed.*
 
 ### Events
+#### `Created`
+```solidity
+event Created(uint256 timestamp);
+```
+Emitted when the writer has given the collateral to the contract. Provides information about the transaction's `timestamp`.
+
 #### `Bought`
 ```solidity
 event Bought(address indexed buyer, uint256 timestamp);
@@ -184,8 +216,51 @@ event Canceled(uint256 timestamp);
 ```
 Emitted when the option has been canceled. Provides information about the transaction's `timestamp`.
 
+## Reference Implementation
+### Concrete Example
+#### Call Option
+Let's say Bob sells an **european call** option to Alice.\
+He gives the right to Alice to buy his **8 LINK** at **25 USDC** each for the **14th of July 2023**.\
+For such a contract, he asks Alice to give him **10 DAI** as a premium.\
+Moreover, Alice has **2 days** after the 31th to exercise or not his option.\
+
+To create the contract, he will give the following parameters:
+
+- `side`: **Call**
+- `underlyingToken`: **0x514910771AF9Ca656af840dff83E8264EcF986CA** *(LINK's address)*
+- `amount`: **8000000000000000000** *(8 \* 10^(LINK's decimals))*
+- `strikeToken`: **0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48** *(USDC's address)*
+- `strike`: **25000000** *(25 \* 10^(USDC's decimals))*
+- `expiration`: **1689292800** *(2023-07-14 timestamp)*
+- `durationExerciseAfterExpiration`: **172800** *(2 days in seconds)*
+- `premiumToken`: **0x6B175474E89094C44Da98b954EedeAC495271d0F** *(DAI's address)*
+- `premium`: **10000000000000000000** *(10 \* 10^(DAI's decimals))*
+- `type`: **European**
+
+Once the contract created, Bob has to transfer the collateral to the contract.\
+He does that by calling the function `approve(address spender, uint256 amount)` on the LINK's contract, with as parameters the contract's address (`spender`) and for `amount`: **8000000000000000000**.\
+Then he can execute `create` on the contract in order to "validate" the option.
+
+Alice for its part, has to allow the spending of his 10 DAI by calling `approve(address spender, uint256 amount)` on the DAI's contract, with as parameters the contract's address (`spender`) and for `amount`: **10000000000000000000**.\
+Then, she can execute `buy` on the contract in order to buy the option.
+
+We're the 15th of July, and Alice has very interest to exercise his option because 1 LINK is traded at 50 USC!\
+So to exercise, she just has to call `exercise` on the contract, and that's it! Bob receives 200 USDC (8 LINK \* 25 USDC), and Alice 8 LINK.
+She made a profit of 400 - 200 = 200 USDC!
+
 ## Rationale
 The proposed ERC-Options standard provides a simple yet powerful interface for options contracts on Ethereum. By standardizing the interface, it becomes easier for developers to build applications and platforms that support options trading, and users can seamlessly interact with different options contracts across multiple dApps.
+
+This contract's concept is oracle-free, because we assumed that a rational buyer will exercise his option only if it's profitable for him.
+
+## Security Considerations
+We implemented an additional parameter to the conception called `durationExerciseAfterExpiration`. This gives a determined time range for the buyer to exercise his option. We are conscious that during this time range, price can change, and an option that was not profitable for the buyer at expiration time, can be during this time range. For this reason, we highly advise writers to think and determine carefully each parameter.
+
+Also, if the option is of type European, an user could theoretically buy a profitable option right before the expiration date, and exercise it the second after. This would lead to new bots searching for these kind of options "forgotten" by their writers, and would create new MEV opportunities.\
+For American option, this is even worse.\
+Once again, we advise writers to frequently check the underlying token price, and take the best decision for them.
+
+**Improvement idea:** if two users agreed for an option off-chain and they want to create it on-chain, there is a risk that between the creation of the contract and the purchase by the second user via the function `buy`, an on-chain user has already bought the contract. So it could be an improvement to add the possibility to directly set a buyer.
 
 ## Implementation
 This standard can be implemented in Solidity and integrated into smart contracts managing options contracts. Developers can deploy their own options contracts that conform to this standard or build applications on top of existing options platforms that implement ERC-Options.
@@ -195,3 +270,6 @@ This standard can be implemented in Solidity and integrated into smart contracts
 
 ## Conclusion
 The ERC-Options standard proposes a common interface for options contracts on Ethereum, promoting interoperability and facilitating the development of decentralized options platforms. By adopting this standard, developers can build applications that seamlessly interact with options contracts, enhancing the user experience and expanding the options trading ecosystem on Ethereum. Community feedback and further discussion are encouraged to refine and improve this proposal.
+
+## Copyright
+Copyright and related rights waived via [CC0](https://eips.ethereum.org/LICENSE).
