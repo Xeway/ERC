@@ -20,134 +20,169 @@ Options are widely used financial instruments that provide users with the right,
 ## Specification
 ### Interface
 ```solidity
-interface IERCOptions {
-    function createOption(
-        address underlyingAsset,
-        uint256 strikePrice,
-        uint256 expirationTime,
-        uint256 amount
-    ) external returns (uint256 optionId);
+interface IOption {
+    event Bought(address indexed buyer, uint256 timestamp);
+    event Exercised(uint256 timestamp);
+    event Expired(uint256 timestamp);
+    event Canceled(uint256 timestamp);
 
-    function getOptionDetails(uint256 optionId)
-        external
-        view
-        returns (
-            address underlyingAsset,
-            uint256 strikePrice,
-            uint256 expirationTime,
-            uint256 amount,
-            uint256 totalSupply
-        );
+    function buy() external returns (bool);
+    function exercise() external returns (bool);
+    function retrieveExpiredTokens() external returns (bool);
+    function cancel() external returns (bool);
 
-    function exerciseOption(uint256 optionId) external;
-
-    function transferOption(
-        uint256 optionId,
-        address recipient,
-        uint256 amount
-    ) external;
-
-    event OptionCreated(
-        uint256 indexed optionId,
-        address indexed creator,
-        address indexed underlyingAsset,
-        uint256 strikePrice,
-        uint256 expirationTime,
-        uint256 amount
-    );
-
-    event OptionExercised(
-        uint256 indexed optionId,
-        address indexed exerciser,
-        uint256 amount
-    );
-
-    event OptionTransferred(
-        uint256 indexed optionId,
-        address indexed from,
-        address indexed to,
-        uint256 amount
-    );
+    function side() external view returns (Side);
+    function underlyingToken() external view returns (address);
+    function amount() external view returns (uint256);
+    function strikeToken() external view returns (address);
+    function strike() external view returns (uint256);
+    function expiration() external view returns (uint256);
+    function durationExerciseAfterExpiration() external view returns (uint256);
+    function premiumToken() external view returns (address);
+    function premium() external view returns (uint256);
+    function getType() external view returns (Type);
+    function writer() external view returns (address);
+    function buyer() external view returns (address);
+    function state() external view returns (State);
 }
 ```
 
+### State Variable Descriptions
+#### `side`
+**Type: `enum`**
+
+Side of the option. Can take the value `Call` or `Put`.
+
+#### `underlyingToken`
+**Type: `address` (`IERC20`)**
+
+Underlying token.
+
+#### `amount`
+**Type: `uint256`**
+
+Amount of the underlying token.
+
+> Be aware of token decimals!
+
+#### `strikeToken`
+**Type: `address` (`IERC20`)**
+
+Token used as a reference to determine the strike price.
+
+#### `strike`
+**Type: `uint256`**
+
+Strike price.
+
+> Be aware of token decimals!
+
+#### `expiration`
+**Type: `uint256`**\
+**Format: _timestamp as seconds since unix epoch_**
+
+Date of the expiration.
+
+#### `durationExerciseAfterExpiration`
+**Type: `uint256`**\
+**Format: _seconds_**
+
+Duration during which the buyer may exercise the option. This period start at the `expiration`'s date.
+
+#### `premiumToken`
+**Type: `address` (`IERC20`)**
+
+Premium token.
+
+#### `premium`
+**Type: `uint256`**
+
+Premium price.
+
+> Be aware of token decimals!
+
+#### `type`
+**Type: `enum`**
+
+Type of the option. Can take the value `European` or `American`.
+
+#### `writer`
+**Type: `address`**
+
+Writer's address. Since the contract inherit from `Ownable`, `writer` is `owner`.
+
+#### `buyer`
+**Type: `address`**
+
+Buyer's address.
+
+#### `state`
+**Type: `enum`**
+
+State of the option. Can take the value `Created`, `Bought`, `Exercised`, `Expired` or `Canceled`.
+
 ### Function Descriptions
-#### `createOption`
+#### `buy`
 ```solidity
-function createOption(
-    address underlyingAsset,
-    uint256 strikePrice,
-    uint256 expirationTime,
-    uint256 amount
-) external returns (uint256 optionId);
+function buy() external returns (bool);
 ```
-Creates a new options contract with the specified parameters. The `underlyingAsset` represents the ERC20 token used as the underlying asset. The `strikePrice` is the agreed-upon price at which the asset can be bought or sold. `expirationTime` defines the timestamp after which the option expires. The `amount` specifies the number of options to be created. Returns the `optionId` that uniquely identifies the created options contract.
+Allows the user to buy the option. The buyer has to previously allow the spend to pay for the premium in the specified token. During the call of the function, the premium is be directly send to the writer.
 
-#### `getOptionDetails`
-```solidity
-function getOptionDetails(uint256 optionId)
-    external
-    view
-    returns (
-        address underlyingAsset,
-        uint256 strikePrice,
-        uint256 expirationTime,
-        uint256 amount,
-        uint256 totalSupply
-    );
-```
-Returns the details of the options contract identified by `optionId`, including the `underlyingAsset`, `strikePrice`, `expirationTime`, `amount` of options created, and the `totalSupply` of options currently in circulation.
+*Returns a boolean depending on whether or not the function was successfully executed.*
 
-#### `exerciseOption`
+#### `exercise`
 ```solidity
-function exerciseOption(uint256 optionId) external;
+function exercise() external returns (bool);
 ```
-Allows the caller to exercise the options contract identified by `optionId`. This function can only be called before the `expirationTime` of the options contract. The function should transfer the underlying assets based on the terms of the option and emit an `OptionExercised` event.
+Allows the buyer to exercise his option.
 
-#### `transferOption`
+- If the option is a call, buyer pays writer at the specified strike price and gets the specified underlying token(s).
+- If the option is a put, buyer transfers to writer the underlying token(s) and gets paid at the specified strike price.
+
+In all case, the buyer has to previously allow the spend of either `strikeToken` or `underlyingToken`.
+
+*Returns a boolean depending on whether or not the function was successfully executed.*
+
+#### `retrieveExpiredTokens`
 ```solidity
-function transferOption(
-    uint256 optionId,
-    address recipient,
-    uint256 amount
-) external;
+function retrieveExpiredTokens() external returns (bool);
 ```
-Transfers `amount` options from the caller's balance to the specified `recipient`. This function emits an `OptionTransferred` event.
+Allows the writer to retrieve the token(s) he locked (used as collateral). Writer can only execute this function after the period `durationExerciseAfterExpiration` happening after `expiration`.
+
+*Returns a boolean depending on whether or not the function was successfully executed.*
+
+#### `call`
+```solidity
+function cancel() external returns (bool);
+```
+Allows the writer to cancel the option and retrieve his/its locked token(s) (used as collateral). Writer can only execute this function if the option hasn't been bought or exercised.
+
+*Returns a boolean depending on whether or not the function was successfully executed.*
 
 ### Events
-#### `OptionCreated`
+#### `Bought`
 ```solidity
-event OptionCreated(
-    uint256 indexed optionId,
-    address indexed creator,
-    address indexed underlyingAsset,
-    uint256 strikePrice,
-    uint256 expirationTime,
-    uint256 amount
-);
+event Bought(address indexed buyer, uint256 timestamp);
 ```
-Emitted when a new options contract is created. Provides information about the `optionId`, `creator`, `underlyingAsset`, `strikePrice`, `expirationTime`, and `amount` of options created.
+Emitted when the option has been bought. Provides information about the `buyer` and the transaction's `timestamp`.
 
-#### `OptionExercised`
+#### `Exercised`
 ```solidity
-event OptionExercised(
-    uint256 indexed optionId,
-    address indexed exerciser,
-    uint256 amount
-);
+event Exercised(uint256 timestamp);
 ```
-Emitted when an options contract is exercised. Provides information about the `optionId`, `exerciser`, and the `amount` of options exercised.
+Emitted when the option has been exercised. Provides information about the transaction's `timestamp`.
 
-#### `OptionTransferred`
+#### `Expired`
 ```solidity
-event OptionTransferred(
-    uint256 indexed optionId,
-    address indexed from,
-    address indexed to,
-    uint256 amount
-);
+event Expired(uint256 timestamp);
 ```
-Emitted when options are transferred between addresses. Provides information about the `optionId`, `from` address, `to` address, and the `amount` of options transferred.
+Emitted when the option has been expired. Provides information about the transaction's `timestamp`.
+
+#### `Canceled`
+```solidity
+event Canceled(uint256 timestamp);
+```
+Emitted when the option has been canceled. Provides information about the transaction's `timestamp`.
 
 ## Rationale
 The proposed ERC-Options standard provides a simple yet powerful interface for options contracts on Ethereum. By standardizing the interface, it becomes easier for developers to build applications and platforms that support options trading, and users can seamlessly interact with different options contracts across multiple dApps.
