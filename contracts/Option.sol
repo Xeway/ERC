@@ -21,19 +21,18 @@ abstract contract Option is Ownable {
     /// @notice _amount the amount of the underlying asset (be aware of token decimals!)
     uint256 private _amount;
 
-    /// @notice _strikeToken token used to pay the writer when buyer exercise option
-    /// @dev buyer will pay _amount * _strike
+    /// @notice _strikeToken token used to determine the strike price
     IERC20 private _strikeToken;
 
     /// @notice _strike price determined in the _strikeToken currency (be aware of token decimals!)
     uint256 private _strike;
 
     /// @notice _expiration in seconds (date)
-    /// @dev must be under the same format as block.timestamp
+    /// @dev must be a timestamp as seconds since unix epoch
     uint256 private _expiration;
 
     /// @notice _durationExerciseAfterExpiration the duration the buyer can exercise his option (duration)
-    /// @dev must be under the same format as block.timestamp
+    /// @dev must be in seconds
     uint256 private _durationExerciseAfterExpiration;
 
     /// @notice _premiumToken the token the premium has to be paid
