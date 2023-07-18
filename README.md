@@ -103,7 +103,7 @@ Date of the expiration.
 **Type: `uint256`**\
 **Format: _seconds_**
 
-Duration during which the buyer may exercise the option. This period start at the `expiration`'s date.
+Duration during which the buyer may exercise the option. This period start at the `expiration`'s date. After this time range, buyer can't exercise and writer can retrieve his collateral.
 
 #### `premiumToken`
 **Type: `address` (`IERC20`)**
@@ -181,7 +181,7 @@ Allows the writer to retrieve the token(s) he locked (used as collateral). Write
 ```solidity
 function cancel() external returns (bool);
 ```
-Allows the writer to cancel the option and retrieve his/its locked token(s) (used as collateral). Writer can only execute this function if the option hasn't been bought or if the option hasn't been exercised and the period `durationExerciseAfterExpiration` happening after `expiration` has passed.
+Allows the writer to cancel the option and retrieve his/its locked token(s) (used as collateral). Writer can only execute this function if the option hasn't been bought.
 
 *Returns a boolean depending on whether or not the function was successfully executed.*
 
@@ -257,7 +257,7 @@ The contract also inherit from OpenZeppelin's `Ownable` contract. Therefore, we 
 You can change the contract's owner (and so the writer) by calling `transferOwnership`.
 
 ## Security Considerations
-We implemented an additional parameter to the conception called `durationExerciseAfterExpiration`. This gives a determined time range for the buyer to exercise his option. We are conscious that during this time range, price can change, and an option that was not profitable for the buyer at expiration time, can be during this time range. For this reason, we highly advise writers to think and determine carefully each parameter.
+We implemented an additional parameter to the conception called `durationExerciseAfterExpiration`. This gives a determined time range for the buyer to exercise his option after which he won't be able to exercise and the writer will be able to retrieve his collateral. We are conscious that during this time range, price can change, and an option that was not profitable for the buyer at expiration time, can be during this time range. For this reason, we highly advise writers to think and determine carefully each parameter.
 
 Also, if the option is of type European, an user could theoretically buy a profitable option right before the expiration date, and exercise it the second after. This would lead to new bots searching for these kind of options "forgotten" by their writers, and would create new MEV opportunities.\
 For American option, this is even worse.\
