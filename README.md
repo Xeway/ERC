@@ -1,24 +1,31 @@
-EIP: <to be assigned>
-Title: ERC-Options: A Standard Interface for Options on the Ethereum Blockchain
-
-Author: Ewan Humbert (@Xeway) <xeway@protonmail.com>
-Discussions-To: [Ethereum Magicians](https://ethereum-magicians.org/)
-Status: Draft
-Type: Standards Track
-Category: ERC
-Created: 2022-09-02
+---
+eip: <to be assigned>
+title: Option Standard
+description: A Standard Interface for Options on the Ethereum Blockchain
+author: Ewan Humbert (@Xeway) <xeway@protonmail.com>
+discussions-To: [Ethereum Magicians](https://ethereum-magicians.org/)
+status: Draft
+type: Standards Track
+category: ERC
+created: 2022-09-02
+---
 
 ## Simple Summary
-This proposal introduces ERC-Options, a standard interface for creating and interacting with options contracts on the Ethereum blockchain. The ERC-Options standard provides a consistent way to represent and trade options, enabling interoperability between different decentralized applications (dApps) and platforms.
+
+This proposal introduces a standard interface for creating and interacting with options contracts on the Ethereum blockchain. The ERC option standard provides a consistent way to represent and trade options, enabling interoperability between different decentralized applications (dApps) and platforms.
 
 ## Abstract
-ERC-Options defines a set of functions and events that allow for the creation, management, and exercising of options contracts on the Ethereum blockchain. This standard ensures that options contracts conform to a common interface, facilitating the development of robust options trading platforms and enabling interoperability between dApps and protocols.
+
+This ERC defines a set of functions and events that allow for the creation, management, and exercising of options contracts on Ethereum. This standard ensures that options contracts conform to a common interface, facilitating the development of robust options trading platforms and enabling interoperability between dApps and protocols.
 
 ## Motivation
+
 Options are widely used financial instruments that provide users with the right, but not the obligation, to buy or sell an underlying asset at a predetermined price within a specified timeframe. By introducing a standard interface for options contracts, we aim to foster a more inclusive and interoperable options ecosystem on Ethereum. This standard will enhance the user experience and facilitate the development of decentralized options platforms, enabling users to seamlessly trade options across different applications.
 
 ## Specification
+
 ### Interface
+
 ```solidity
 interface IOption {
     event Created(uint256 timestamp);
@@ -50,6 +57,7 @@ interface IOption {
 ```
 
 ### Creation (constructor)
+
 At creation time, user must provide the following parameters:
 
 - `side`
@@ -64,6 +72,7 @@ At creation time, user must provide the following parameters:
 - `type`
 
 ### State Variable Descriptions
+
 #### `side`
 **Type: `enum`**
 
@@ -138,6 +147,7 @@ Buyer's address.
 State of the option. Can take the value `Invalid` (at creation), `Created` (when collateral received), `Bought`, `Exercised`, `Expired` or `Canceled`.
 
 ### Function Descriptions
+
 #### `create`
 ```solidity
 function create() external returns (bool);
@@ -186,6 +196,7 @@ Allows the writer to cancel the option and retrieve his/its locked token(s) (use
 *Returns a boolean depending on whether or not the function was successfully executed.*
 
 ### Events
+
 #### `Created`
 ```solidity
 event Created(uint256 timestamp);
@@ -217,8 +228,11 @@ event Canceled(uint256 timestamp);
 Emitted when the option has been canceled. Provides information about the transaction's `timestamp`.
 
 ## Reference Implementation
+
 ### Concrete Example
+
 #### Call Option
+
 Let's say Bob sells an **european call** option to Alice.\
 He gives the right to Alice to buy his **8 LINK** at **25 USDC** each for the **14th of July 2023**.\
 For such a contract, he asks Alice to give him **10 DAI** as a premium.\
@@ -249,7 +263,8 @@ So to exercise, she just has to call `exercise` on the contract, and that's it! 
 She made a profit of 400 - 200 = 200 USDC!
 
 ## Rationale
-The proposed ERC-Options standard provides a simple yet powerful interface for options contracts on Ethereum. By standardizing the interface, it becomes easier for developers to build applications and platforms that support options trading, and users can seamlessly interact with different options contracts across multiple dApps.
+
+The proposed ERC option standard provides a simple yet powerful interface for options contracts on Ethereum. By standardizing the interface, it becomes easier for developers to build applications and platforms that support options trading, and users can seamlessly interact with different options contracts across multiple dApps.
 
 This contract's concept is oracle-free, because we assumed that a rational buyer will exercise his option only if it's profitable for him.
 
@@ -257,6 +272,7 @@ The contract also inherit from OpenZeppelin's `Ownable` contract. Therefore, we 
 You can change the contract's owner (and so the writer) by calling `transferOwnership`.
 
 ## Security Considerations
+
 We implemented an additional parameter to the conception called `durationExerciseAfterExpiration`. This gives a determined time range for the buyer to exercise his option after which he won't be able to exercise and the writer will be able to retrieve his collateral. We are conscious that during this time range, price can change, and an option that was not profitable for the buyer at expiration time, can be during this time range. For this reason, we highly advise writers to think and determine carefully each parameter.
 
 Also, if the option is of type European, an user could theoretically buy a profitable option right before the expiration date, and exercise it the second after. This would lead to new bots searching for these kind of options "forgotten" by their writers, and would create new MEV opportunities.\
@@ -266,13 +282,17 @@ Once again, we advise writers to frequently check the underlying token price, an
 **Improvement idea:** if two users agreed for an option off-chain and they want to create it on-chain, there is a risk that between the creation of the contract and the purchase by the second user via the function `buy`, an on-chain user has already bought the contract. So it could be an improvement to add the possibility to directly set a buyer.
 
 ## Implementation
-This standard can be implemented in Solidity and integrated into smart contracts managing options contracts. Developers can deploy their own options contracts that conform to this standard or build applications on top of existing options platforms that implement ERC-Options.
+
+This standard can be implemented in Solidity and integrated into smart contracts managing options contracts. Developers can deploy their own options contracts that conform to this standard or build applications on top of existing options platforms that implement this ERC.
 
 ## References
+
 - Related EIPs and standards: ERC-20, ERC-721
 
 ## Conclusion
-The ERC-Options standard proposes a common interface for options contracts on Ethereum, promoting interoperability and facilitating the development of decentralized options platforms. By adopting this standard, developers can build applications that seamlessly interact with options contracts, enhancing the user experience and expanding the options trading ecosystem on Ethereum. Community feedback and further discussion are encouraged to refine and improve this proposal.
+
+The ERC option standard proposes a common interface for options contracts on Ethereum, promoting interoperability and facilitating the development of decentralized options platforms. By adopting this standard, developers can build applications that seamlessly interact with options contracts, enhancing the user experience and expanding the options trading ecosystem on Ethereum. Community feedback and further discussion are encouraged to refine and improve this proposal.
 
 ## Copyright
+
 Copyright and related rights waived via [CC0](https://eips.ethereum.org/LICENSE).
