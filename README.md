@@ -234,7 +234,7 @@ Emitted when the option has been canceled. Provides information about the transa
 #### Call Option
 
 Let's say Bob sells an **european call** option to Alice.\
-He gives the right to Alice to buy his **8 LINK** at **25 USDC** each for the **14th of July 2023**.\
+He gives the right to Alice to buy to him **8 LINK** at **25 USDC** each for the **14th of July 2023**.\
 For such a contract, he asks Alice to give him **10 DAI** as a premium.\
 Moreover, Alice has **2 days** after the 31th to exercise or not his option.\
 
@@ -251,7 +251,7 @@ To create the contract, he will give the following parameters:
 - `premium`: **10000000000000000000** *(10 \* 10^(DAI's decimals))*
 - `type`: **European**
 
-Once the contract created, Bob has to transfer the collateral to the contract.\
+Once the contract created, Bob has to transfer the collateral to the contract. This collateral corresponds to the funds he will have to give Alice if she decides to exercise the option. For this option, he has to give as collateral 8 LINK.\
 He does that by calling the function `approve(address spender, uint256 amount)` on the LINK's contract, with as parameters the contract's address (`spender`) and for `amount`: **8000000000000000000**.\
 Then he can execute `create` on the contract in order to "validate" the option.
 
@@ -260,7 +260,42 @@ Then, she can execute `buy` on the contract in order to buy the option.
 
 We're the 15th of July, and Alice has very interest to exercise his option because 1 LINK is traded at 50 USC!\
 So to exercise, she just has to call `exercise` on the contract, and that's it! Bob receives 200 USDC (8 LINK \* 25 USDC), and Alice 8 LINK.\
-She made a profit of 400 - 200 = 200 USDC!
+She made a profit of 8\*50 - 200 = 200 USDC!
+
+#### Put Option
+
+Let's say Bob sells an **european put** option to Alice.\
+He gives the right to Alice to sell to him **8 LINK** at **25 USDC** each for the **14th of July 2023**.\
+For such a contract, he asks Alice to give him **10 DAI** as a premium.\
+Moreover, Alice has **2 days** after the 31th to exercise or not his option.\
+
+To create the contract, he will give the following parameters:
+
+- `side`: **Put**
+- `underlyingToken`: **0x514910771AF9Ca656af840dff83E8264EcF986CA** *(LINK's address)*
+- `amount`: **8000000000000000000** *(8 \* 10^(LINK's decimals))*
+- `strikeToken`: **0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48** *(USDC's address)*
+- `strike`: **25000000** *(25 \* 10^(USDC's decimals))*
+- `expiration`: **1689292800** *(2023-07-14 timestamp)*
+- `durationExerciseAfterExpiration`: **172800** *(2 days in seconds)*
+- `premiumToken`: **0x6B175474E89094C44Da98b954EedeAC495271d0F** *(DAI's address)*
+- `premium`: **10000000000000000000** *(10 \* 10^(DAI's decimals))*
+- `type`: **European**
+
+Once the contract created, Bob has to transfer the collateral to the contract. This collateral corresponds to the funds he will have to give Alice if she decides to exercise the option. For this option, he has to give as collateral 200 USDC (8 \* 25).\
+He does that by calling the function `approve(address spender, uint256 amount)` on the USDC's contract, with as parameters the contract's address (`spender`) and for `amount`: **200000000** *(`strike`\*`amount` / 10^(LINK's decimals))*.\
+Then he can execute `create` on the contract in order to "validate" the option.
+
+Alice for its part, has to allow the spending of his 10 DAI by calling `approve(address spender, uint256 amount)` on the DAI's contract, with as parameters the contract's address (`spender`) and for `amount`: **10000000000000000000**.\
+Then, she can execute `buy` on the contract in order to buy the option.
+
+We're the 15th of July, and Alice has very interest to exercise his option because 1 LINK is traded at only 10 USC!\
+So to exercise, she just has to call `exercise` on the contract, and that's it! Bob receives 8 LINK, and Alice 200 USDC (8 LINK \* 25 USDC).\
+She made a profit of 200 - 8\*10 = 120 USDC!
+
+#### Retrieve collateral
+
+Let's say Alice never exercised his option because it wasn't profitable enough for her. To retrieve his collateral, Bob would have to wait for the `durationExerciseAfterExpiration` period to finish. In the examples, this characteristic is set to 2 days, so he would be able to get back his collateral from the 16th of July, by simply calling `retrieveExpiredTokens`.
 
 ## Rationale
 
