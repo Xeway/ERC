@@ -183,7 +183,7 @@ In all case, the buyer has to previously allow the spend of either `strikeToken`
 ```solidity
 function retrieveExpiredTokens() external returns (bool);
 ```
-Allows the writer to retrieve the token(s) he locked (used as collateral). Writer can only execute this function after the period `exerciseDuration` happening after `expiration`.
+Allows the writer to retrieve the token(s) he locked (used as collateral). Writer can only execute this function after the period `exerciseDuration` happening/starting right after `expiration`.
 
 *Returns a boolean depending on whether or not the function was successfully executed.*
 

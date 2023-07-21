@@ -32,6 +32,7 @@ abstract contract Option is Ownable {
     uint256 private _expiration;
 
     /// @notice _exerciseDuration the duration the buyer can exercise his option (duration)
+    /// @notice this period starts right after _expiration
     /// @dev must be in seconds
     uint256 private _exerciseDuration;
 
