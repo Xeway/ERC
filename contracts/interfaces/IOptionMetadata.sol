@@ -17,7 +17,7 @@ interface IOptionMetadata is IOption {
 
     function expiration() external view returns (uint256);
 
-    function durationExerciseAfterExpiration() external view returns (uint256);
+    function exerciseDuration() external view returns (uint256);
 
     function premiumToken() external view returns (address);
 

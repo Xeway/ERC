@@ -46,7 +46,7 @@ interface IOption {
     function strikeToken() external view returns (address);
     function strike() external view returns (uint256);
     function expiration() external view returns (uint256);
-    function durationExerciseAfterExpiration() external view returns (uint256);
+    function exerciseDuration() external view returns (uint256);
     function premiumToken() external view returns (address);
     function premium() external view returns (uint256);
     function getType() external view returns (Type);
@@ -66,7 +66,7 @@ At creation time, user must provide the following parameters:
 - `strikeToken`
 - `strike`
 - `expiration`
-- `durationExerciseAfterExpiration`
+- `exerciseDuration`
 - `premiumToken`
 - `premium`
 - `type`
@@ -108,7 +108,7 @@ Strike price.
 
 Date of the expiration.
 
-#### `durationExerciseAfterExpiration`
+#### `exerciseDuration`
 **Type: `uint256`**\
 **Format: _seconds_**
 
@@ -183,7 +183,7 @@ In all case, the buyer has to previously allow the spend of either `strikeToken`
 ```solidity
 function retrieveExpiredTokens() external returns (bool);
 ```
-Allows the writer to retrieve the token(s) he locked (used as collateral). Writer can only execute this function after the period `durationExerciseAfterExpiration` happening after `expiration`.
+Allows the writer to retrieve the token(s) he locked (used as collateral). Writer can only execute this function after the period `exerciseDuration` happening after `expiration`.
 
 *Returns a boolean depending on whether or not the function was successfully executed.*
 
@@ -246,7 +246,7 @@ To create the contract, he will give the following parameters:
 - `strikeToken`: **0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48** *(USDC's address)*
 - `strike`: **25000000** *(25 \* 10^(USDC's decimals))*
 - `expiration`: **1689292800** *(2023-07-14 timestamp)*
-- `durationExerciseAfterExpiration`: **172800** *(2 days in seconds)*
+- `exerciseDuration`: **172800** *(2 days in seconds)*
 - `premiumToken`: **0x6B175474E89094C44Da98b954EedeAC495271d0F** *(DAI's address)*
 - `premium`: **10000000000000000000** *(10 \* 10^(DAI's decimals))*
 - `type`: **European**
@@ -277,7 +277,7 @@ To create the contract, he will give the following parameters:
 - `strikeToken`: **0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48** *(USDC's address)*
 - `strike`: **25000000** *(25 \* 10^(USDC's decimals))*
 - `expiration`: **1689292800** *(2023-07-14 timestamp)*
-- `durationExerciseAfterExpiration`: **172800** *(2 days in seconds)*
+- `exerciseDuration`: **172800** *(2 days in seconds)*
 - `premiumToken`: **0x6B175474E89094C44Da98b954EedeAC495271d0F** *(DAI's address)*
 - `premium`: **10000000000000000000** *(10 \* 10^(DAI's decimals))*
 - `type`: **European**
@@ -295,7 +295,7 @@ She made a profit of 200 - 8\*10 = 120 USDC!
 
 #### Retrieve collateral
 
-Let's say Alice never exercised his option because it wasn't profitable enough for her. To retrieve his collateral, Bob would have to wait for the `durationExerciseAfterExpiration` period to finish. In the examples, this characteristic is set to 2 days, so he would be able to get back his collateral from the 16th of July, by simply calling `retrieveExpiredTokens`.
+Let's say Alice never exercised his option because it wasn't profitable enough for her. To retrieve his collateral, Bob would have to wait for the `exerciseDuration` period to finish. In the examples, this characteristic is set to 2 days, so he would be able to get back his collateral from the 16th of July, by simply calling `retrieveExpiredTokens`.
 
 ## Rationale
 
@@ -308,7 +308,7 @@ You can change the contract's owner (and so the writer) by calling `transferOwne
 
 ## Security Considerations
 
-We implemented an additional parameter to the conception called `durationExerciseAfterExpiration`. This gives a determined time range for the buyer to exercise his option after which he won't be able to exercise and the writer will be able to retrieve his collateral. We are conscious that during this time range, price can change, and an option that was not profitable for the buyer at expiration time, can be during this time range. For this reason, we highly advise writers to think and determine carefully each parameter.
+We implemented an additional parameter to the conception called `exerciseDuration`. This gives a determined time range for the buyer to exercise his option after which he won't be able to exercise and the writer will be able to retrieve his collateral. We are conscious that during this time range, price can change, and an option that was not profitable for the buyer at expiration time, can be during this time range. For this reason, we highly advise writers to think and determine carefully each parameter.
 
 Also, if the option is of type European, an user could theoretically buy a profitable option right before the expiration date, and exercise it the second after. This would lead to new bots searching for these kind of options "forgotten" by their writers, and would create new MEV opportunities.\
 For American option, this is even worse.\

@@ -31,9 +31,9 @@ abstract contract Option is Ownable {
     /// @dev must be a timestamp as seconds since unix epoch
     uint256 private _expiration;
 
-    /// @notice _durationExerciseAfterExpiration the duration the buyer can exercise his option (duration)
+    /// @notice _exerciseDuration the duration the buyer can exercise his option (duration)
     /// @dev must be in seconds
-    uint256 private _durationExerciseAfterExpiration;
+    uint256 private _exerciseDuration;
 
     /// @notice _premiumToken the token the premium has to be paid
     IERC20 private _premiumToken;
@@ -89,7 +89,7 @@ abstract contract Option is Ownable {
         address strikeToken_,
         uint256 strike_,
         uint256 expiration_,
-        uint256 durationExerciseAfterExpiration_,
+        uint256 exerciseDuration_,
         address premiumToken_,
         uint256 premium_,
         Type type_
@@ -100,7 +100,7 @@ abstract contract Option is Ownable {
             strikeToken_ == address(0) ||
             strike_ == 0 ||
             expiration_ <= block.timestamp ||
-            durationExerciseAfterExpiration_ == 0 ||
+            exerciseDuration_ == 0 ||
             underlyingToken_ == strikeToken_ // the underlying token and the stablecoin cannot be the same
         ) {
             revert InvalidValue();
@@ -115,7 +115,7 @@ abstract contract Option is Ownable {
         _strike = strike_;
 
         _expiration = expiration_;
-        _durationExerciseAfterExpiration = durationExerciseAfterExpiration_;
+        _exerciseDuration = exerciseDuration_;
 
         _premiumToken = IERC20(premiumToken_);
         _premium = premium_;
@@ -180,7 +180,7 @@ abstract contract Option is Ownable {
         if (_type == Type.European && block.timestamp <= _expiration) {
             revert Forbidden();
         }
-        if (block.timestamp > _expiration + _durationExerciseAfterExpiration) {
+        if (block.timestamp > _expiration + _exerciseDuration) {
             revert Forbidden();
         }
 
@@ -211,11 +211,11 @@ abstract contract Option is Ownable {
         return true;
     }
 
-    /// @notice if buyer hasn't exercised his option during the _durationExerciseAfterExpiration period, writer can retrieve its funds
+    /// @notice if buyer hasn't exercised his option during the _exerciseDuration period, writer can retrieve its funds
     function retrieveExpiredTokens() public onlyOwner virtual returns (bool) {
         if (_state != State.Bought) revert Forbidden();
 
-        if (block.timestamp <= _expiration + _durationExerciseAfterExpiration) revert NotExpired();
+        if (block.timestamp <= _expiration + _exerciseDuration) revert NotExpired();
 
         _transfer(_underlyingToken, _msgSender(), _amount);
 
@@ -281,8 +281,8 @@ abstract contract Option is Ownable {
         return _expiration;
     }
 
-    function durationExerciseAfterExpiration() public view virtual returns (uint256) {
-        return _durationExerciseAfterExpiration;
+    function exerciseDuration() public view virtual returns (uint256) {
+        return _exerciseDuration;
     }
 
     function premiumToken() public view virtual returns (address) {
