@@ -227,8 +227,6 @@ event Canceled(uint256 timestamp);
 ```
 Emitted when the option has been canceled. Provides information about the transaction's `timestamp`.
 
-## Reference Implementation
-
 ### Concrete Example
 
 #### Call Option
@@ -305,6 +303,11 @@ This contract's concept is oracle-free, because we assumed that a rational buyer
 
 The contract also inherit from OpenZeppelin's `Ownable` contract. Therefore, we decided that the owner of the contract is also the writer.\
 You can change the contract's owner (and so the writer) by calling `transferOwnership`.
+
+## Reference Implementation
+
+[See an implementation of this ERC here.](https://github.com/Xeway/ERC/blob/main/contracts/Option.sol)\
+The code's foundation is inspired by [Tobias](https://github.com/TobiasBK)'s work.
 
 ## Security Considerations
 
