@@ -1,7 +1,7 @@
 ---
 eip: <to be assigned>
-title: Option Standard
-description: A Standard Interface for Options on the Ethereum Blockchain
+title: Vanilla Option Standard
+description: A Standard Interface for Vanilla Options on the Ethereum Blockchain
 author: Ewan Humbert (@Xeway) <xeway@protonmail.com>
 discussions-To: [Ethereum Magicians](https://ethereum-magicians.org/)
 status: Draft
@@ -12,7 +12,7 @@ created: 2022-09-02
 
 ## Simple Summary
 
-This proposal introduces a standard interface for creating and interacting with options contracts on the Ethereum blockchain. The ERC option standard provides a consistent way to represent and trade options, enabling interoperability between different decentralized applications (dApps) and platforms.
+This proposal introduces a standard interface for creating and interacting with vanilla options contracts on the Ethereum blockchain. The ERC option standard provides a consistent way to represent and trade options, enabling interoperability between different decentralized applications (dApps) and platforms.
 
 ## Abstract
 
@@ -303,6 +303,10 @@ This contract's concept is oracle-free, because we assumed that a rational buyer
 
 The contract also inherit from OpenZeppelin's `Ownable` contract. Therefore, we decided that the owner of the contract is also the writer.\
 You can change the contract's owner (and so the writer) by calling `transferOwnership`.
+
+The premium is to be determined by the writer, so that he's free to choose how to calculate the option's. We assume that many premiums will be determined by the *Black-Scholes model*, and computing this off-chain is better for gas costs purposes.
+
+This ERC is intended to represent **vanilla** options. However, exotic options can be built from this ERC.
 
 ## Reference Implementation
 
