@@ -13,7 +13,7 @@ interface IVanillaOption {
         uint256 amount;
         address strikeToken;
         uint256 strike;
-        uint256 exceriseWindowStart;
+        uint256 exerciseWindowStart;
         uint256 exerciseWindowEnd;
         uint256 buyingWindowEnd;
         address premiumToken;
@@ -40,9 +40,9 @@ interface IVanillaOption {
 
     function buy(uint256 id, uint256 amount, bool mustCompletelyFill) external;
 
-    function exercise(uint256 id, uint256 amount) external returns (bool);
+    function exercise(uint256 id, uint256 amount) external;
 
-    function retrieveExpiredTokens(uint256 id) external returns (bool);
+    function retrieveExpiredTokens(uint256 id) external;
 
-    function cancel(uint256 id) external returns (bool);
+    function cancel(uint256 id) external;
 }
