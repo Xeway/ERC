@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IVanillaOption} from "./interfaces/IVanillaOption.sol";
-import {IERC20Metadata as IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import { IVanillaOption } from "./interfaces/IVanillaOption.sol";
+import { IERC20Metadata as IERC20 } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     error TransferFailed();
+    error CannotTransferTokens();
 
     enum State {
         Invalid,
@@ -32,7 +32,7 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
     mapping(uint256 => EnumerableSet.AddressSet) allowedBuyers;
     uint256 issuanceCounter;
 
-    constructor() ERC1155("") {}
+    constructor() ERC1155("") ReentrancyGuard() {}
 
     function create(
         VanillaOptionData memory optionData,
@@ -55,19 +55,13 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
 
         IERC20 underlyingToken = IERC20(optionData.underlyingToken);
         if (optionData.side == Side.Call) {
-            _transferFrom(
-                underlyingToken,
-                _msgSender(),
-                address(this),
-                optionData.amount
-            );
+            _transferFrom(underlyingToken, _msgSender(), address(this), optionData.amount);
         } else {
             _transferFrom(
                 IERC20(optionData.strikeToken),
                 _msgSender(),
                 address(this),
-                (optionData.strike * optionData.amount) /
-                    10 ** underlyingToken.decimals()
+                (optionData.strike * optionData.amount) / 10 ** underlyingToken.decimals()
             );
         }
 
@@ -77,33 +71,19 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         return issuanceCounter - 1;
     }
 
-    function buy(
-        uint256 id,
-        uint256 amount,
-        bool mustCompletelyFill
-    ) external nonReentrant {
+    function buy(uint256 id, uint256 amount, bool mustCompletelyFill) external nonReentrant {
         require(issuance[id].state == State.Active);
         require(block.timestamp <= issuance[id].data.buyingWindowEnd);
-        require(
-            issuance[id].allAllowedToBuy ||
-                allowedBuyers[id].contains(_msgSender())
-        );
+        require(issuance[id].allAllowedToBuy || allowedBuyers[id].contains(_msgSender()));
+        require(amount >= issuance[id].data.minBuyingLot);
 
-        uint256 buyerOptionCount = Math.min(
-            amount,
-            issuance[id].data.amount - issuance[id].soldOptions
-        );
+        uint256 buyerOptionCount = Math.min(amount, issuance[id].data.amount - issuance[id].soldOptions);
 
         require(buyerOptionCount > 0);
         require(!mustCompletelyFill || buyerOptionCount == amount);
-        require(
-            !issuance[id].data.forceToBuyAllOptions ||
-                amount >= issuance[id].data.amount
-        );
 
         if (issuance[id].data.premium > 0) {
-            uint256 premiumPaid = (buyerOptionCount *
-                issuance[id].data.premium) / issuance[id].data.amount;
+            uint256 premiumPaid = (buyerOptionCount * issuance[id].data.premium) / issuance[id].data.amount;
             require(premiumPaid > 0);
 
             bool success = IERC20(issuance[id].data.premiumToken).transferFrom(
@@ -132,28 +112,17 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         IERC20 strikeToken = IERC20(issuance[id].data.strikeToken);
         uint256 underlyingDecimals = underlyingToken.decimals();
 
-        uint256 transferredStrikeTokens = (issuance[id].data.strike * amount) /
-            10 ** underlyingDecimals;
+        uint256 transferredStrikeTokens = (issuance[id].data.strike * amount) / 10 ** underlyingDecimals;
         require(transferredStrikeTokens > 0);
         if (issuance[id].data.side == Side.Call) {
             // buyer pay writer for the underlying token(s) at strike price
-            _transferFrom(
-                strikeToken,
-                _msgSender(),
-                issuance[id].seller,
-                transferredStrikeTokens
-            );
+            _transferFrom(strikeToken, _msgSender(), issuance[id].seller, transferredStrikeTokens);
 
             // transfer underlying token(s) to buyer
             _transfer(underlyingToken, _msgSender(), amount);
         } else {
             // buyer transfer the underlying token(s) to writer
-            _transferFrom(
-                underlyingToken,
-                _msgSender(),
-                issuance[id].seller,
-                amount
-            );
+            _transferFrom(underlyingToken, _msgSender(), issuance[id].seller, amount);
 
             // pay buyer at strike price
             _transfer(strikeToken, _msgSender(), transferredStrikeTokens);
@@ -172,13 +141,8 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         require(block.timestamp > issuance[id].data.exerciseWindowEnd);
 
         if (issuance[id].data.amount > issuance[id].exercisedOptions) {
-            uint256 underlyingTokenGiveback = issuance[id].data.amount -
-                issuance[id].exercisedOptions;
-            _transfer(
-                IERC20(issuance[id].data.underlyingToken),
-                _msgSender(),
-                underlyingTokenGiveback
-            );
+            uint256 underlyingTokenGiveback = issuance[id].data.amount - issuance[id].exercisedOptions;
+            _transfer(IERC20(issuance[id].data.underlyingToken), _msgSender(), underlyingTokenGiveback);
         }
 
         _deleteData(id);
@@ -190,11 +154,7 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         require(_msgSender() == issuance[id].seller);
         require(issuance[id].soldOptions == 0);
 
-        _transfer(
-            IERC20(issuance[id].data.underlyingToken),
-            _msgSender(),
-            issuance[id].data.amount
-        );
+        _transfer(IERC20(issuance[id].data.underlyingToken), _msgSender(), issuance[id].data.amount);
 
         _deleteData(id);
         emit Canceled(id, block.timestamp);
@@ -215,22 +175,12 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         if (!success) revert TransferFailed();
     }
 
-    function _transferFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 amount
-    ) internal {
+    function _transferFrom(IERC20 token, address from, address to, uint256 amount) internal {
         bool success = token.transferFrom(from, to, amount);
         if (!success) revert TransferFailed();
     }
 
-    function _mint(
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) internal override {
+    function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal override {
         super._mint(to, id, amount, data);
     }
 
@@ -249,7 +199,9 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         for (uint i = 0; i < ids.length; i++) {
             if (!issuance[i].data.renounceable) {
                 // If the options are non-renoncueable then only mint and burn operations are allowed
-                require(from == address(0) || to == address(0));
+                if (from != address(0) && to != address(0)) {
+                    revert CannotTransferTokens();
+                }
             }
         }
     }

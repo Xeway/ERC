@@ -19,24 +19,16 @@ interface IVanillaOption {
         address premiumToken;
         uint256 premium;
         bool renounceable;
-        bool forceToBuyAllOptions;
+        uint256 minBuyingLot;
     }
 
     event Created(uint256 indexed id, uint256 timestamp);
-    event Bought(
-        uint256 indexed id,
-        uint256 amount,
-        address indexed buyer,
-        uint256 timestamp
-    );
+    event Bought(uint256 indexed id, uint256 amount, address indexed buyer, uint256 timestamp);
     event Exercised(uint256 indexed id, uint256 amount, uint256 timestamp);
     event Expired(uint256 indexed id, uint256 timestamp);
     event Canceled(uint256 indexed id, uint256 timestamp);
 
-    function create(
-        VanillaOptionData memory optionData,
-        address[] calldata allowedBuyers
-    ) external returns (uint256);
+    function create(VanillaOptionData memory optionData, address[] calldata allowedBuyers) external returns (uint256);
 
     function buy(uint256 id, uint256 amount, bool mustCompletelyFill) external;
 
