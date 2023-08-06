@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.19;
 
 interface IVanillaOption {
     enum Side {
@@ -13,13 +13,13 @@ interface IVanillaOption {
         uint256 amount;
         address strikeToken;
         uint256 strike;
+        address premiumToken;
+        uint256 premium;
         uint256 exerciseWindowStart;
         uint256 exerciseWindowEnd;
         uint256 buyingWindowEnd;
-        address premiumToken;
-        uint256 premium;
-        bool renounceable;
         uint256 minBuyingLot;
+        bool renounceable;
     }
 
     event Created(uint256 indexed id, uint256 timestamp);
@@ -37,4 +37,6 @@ interface IVanillaOption {
     function retrieveExpiredTokens(uint256 id) external;
 
     function cancel(uint256 id) external;
+
+    function updatePremium(uint256 id, uint256 amount) external;
 }
