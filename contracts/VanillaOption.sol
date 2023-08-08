@@ -80,6 +80,9 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         require(!mustCompletelyFill || buyerOptionCount == amount, "mustCompletelyFill");
 
         if (issuance[id].data.premium > 0) {
+            uint256 remainder = (buyerOptionCount * issuance[id].data.premium) % issuance[id].data.amount;  
+            // Adjust the amount of options being bought when modulo is not zero
+            buyerOptionCount -= remainder / issuance[id].data.premium;
             uint256 premiumPaid = (buyerOptionCount * issuance[id].data.premium) / issuance[id].data.amount;
             require(premiumPaid > 0, "premiumPaid");
 
