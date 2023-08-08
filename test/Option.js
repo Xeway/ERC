@@ -1,12 +1,12 @@
-const {
-  time,
-  loadFixture,
-} = require("@nomicfoundation/hardhat-network-helpers");
+const { time, loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
 
 describe("Option", function () {
   const TOKEN1_START_BALANCE = 10 * 10 ** 6;
   const TOKEN2_START_BALANCE = 10 * 10 ** 6;
+  const OPTION_COUNT = 1 * 10 ** 6;
+  const STRIKE = 4 * 10 ** 5;
+  const PREMIUM = 2 * 10 ** 4;
 
   async function deployInfraFixture() {
     const [owner, acct1, acct2, acct3] = await ethers.getSigners();
@@ -30,7 +30,45 @@ describe("Option", function () {
 
     currentTime = await time.latest();
 
-    return { optionContract: vanillaOption, token1: token1, token2: token2, acct1: acct1, acct2: acct2, acct3: acct3, currentTime: currentTime };
+    const callOption = {
+      side: 0,
+      underlyingToken: token1.target,
+      amount: OPTION_COUNT,
+      strikeToken: token2.target,
+      strike: STRIKE,
+      premiumToken: token2.target,
+      premium: PREMIUM,
+      exerciseWindowStart: currentTime,
+      exerciseWindowEnd: currentTime + 60 * 60,
+      minBuyingLot: 1,
+      renounceable: true,
+    };
+
+    const putOption = {
+      side: 1,
+      underlyingToken: token1.target,
+      amount: OPTION_COUNT,
+      strikeToken: token2.target,
+      strike: STRIKE,
+      premiumToken: token2.target,
+      premium: PREMIUM,
+      exerciseWindowStart: currentTime,
+      exerciseWindowEnd: currentTime + 60 * 60,
+      minBuyingLot: 1,
+      renounceable: true,
+    };
+
+    return {
+      callOption: callOption,
+      putOption: putOption,
+      optionContract: vanillaOption,
+      token1: token1,
+      token2: token2,
+      acct1: acct1,
+      acct2: acct2,
+      acct3: acct3,
+      currentTime: currentTime,
+    };
   }
 
   it("Should correctly deploy the contract", async function () {
@@ -40,27 +78,11 @@ describe("Option", function () {
 
   describe("Creation", function () {
     it("Should correctly create a call option", async function () {
-      const { optionContract, token1, token2, acct1, currentTime } = await loadFixture(deployInfraFixture);
-      const OPTION_COUNT = 1 * 10 ** 6;
+      const { callOption, optionContract, token1, acct1 } = await loadFixture(deployInfraFixture);
 
       await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
 
-      const optionData = {
-        side: 0,
-        underlyingToken: token1.target,
-        amount: OPTION_COUNT,
-        strikeToken: token2.target,
-        strike: 1 * 10 ** 6,
-        premiumToken: token2.target,
-        premium: 1 * 10 ** 4,
-        exerciseWindowStart: currentTime,
-        exerciseWindowEnd: currentTime + 60 * 60,
-        buyingWindowEnd: currentTime + 15 * 60,
-        minBuyingLot: 1,
-        renounceable: true
-      };
-
-      await expect(optionContract.connect(acct1).create(optionData, [])).to.emit(optionContract, "Created");
+      await expect(optionContract.connect(acct1).create(callOption, [])).to.emit(optionContract, "Created");
       expect(await optionContract.issuanceCounter()).to.equal(1);
 
       const option = await optionContract.issuance(0);
@@ -68,47 +90,29 @@ describe("Option", function () {
       expect(option.exercisedOptions).to.equal(0);
       expect(option.soldOptions).to.equal(0);
       expect(option.state).to.equal(1);
-      expect(option.data.side).to.equal(optionData.side);
-      expect(option.data.underlyingToken).to.equal(optionData.underlyingToken);
-      expect(option.data.amount).to.equal(optionData.amount);
-      expect(option.data.strikeToken).to.equal(optionData.strikeToken);
-      expect(option.data.strike).to.equal(optionData.strike);
-      expect(option.data.premiumToken).to.equal(optionData.premiumToken);
-      expect(option.data.premium).to.equal(optionData.premium);
-      expect(option.data.exerciseWindowStart).to.equal(optionData.exerciseWindowStart);
-      expect(option.data.exerciseWindowEnd).to.equal(optionData.exerciseWindowEnd);
-      expect(option.data.buyingWindowEnd).to.equal(optionData.buyingWindowEnd);
-      expect(option.data.minBuyingLot).to.equal(optionData.minBuyingLot);
-      expect(option.data.renounceable).to.equal(optionData.renounceable);
+      expect(option.data.side).to.equal(callOption.side);
+      expect(option.data.underlyingToken).to.equal(callOption.underlyingToken);
+      expect(option.data.amount).to.equal(callOption.amount);
+      expect(option.data.strikeToken).to.equal(callOption.strikeToken);
+      expect(option.data.strike).to.equal(callOption.strike);
+      expect(option.data.premiumToken).to.equal(callOption.premiumToken);
+      expect(option.data.premium).to.equal(callOption.premium);
+      expect(option.data.exerciseWindowStart).to.equal(callOption.exerciseWindowStart);
+      expect(option.data.exerciseWindowEnd).to.equal(callOption.exerciseWindowEnd);
+      expect(option.data.minBuyingLot).to.equal(callOption.minBuyingLot);
+      expect(option.data.renounceable).to.equal(callOption.renounceable);
 
       expect(await token1.balanceOf(optionContract.target)).to.equal(OPTION_COUNT);
       expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE - OPTION_COUNT);
     });
 
     it("Should correctly create a put option", async function () {
-      const { optionContract, token1, token2, acct1, currentTime } = await loadFixture(deployInfraFixture);
-      const OPTION_COUNT = 1 * 10 ** 6;
-      const STRIKE = 4 * 10 ** 5;
-      const TOTAL_UNDERLYING_PRICE = OPTION_COUNT * STRIKE / 10 ** 6;
+      const { putOption, optionContract, token2, acct1 } = await loadFixture(deployInfraFixture);
 
+      const TOTAL_UNDERLYING_PRICE = (OPTION_COUNT * STRIKE) / 10 ** 6;
       await token2.connect(acct1).approve(optionContract.target, TOTAL_UNDERLYING_PRICE);
 
-      const optionData = {
-        side: 1,
-        underlyingToken: token1.target,
-        amount: OPTION_COUNT,
-        strikeToken: token2.target,
-        strike: STRIKE,
-        premiumToken: token2.target,
-        premium: 1 * 10 ** 4,
-        exerciseWindowStart: currentTime,
-        exerciseWindowEnd: currentTime + 60 * 60,
-        buyingWindowEnd: currentTime + 15 * 60,
-        minBuyingLot: 1,
-        renounceable: true
-      };
-
-      await expect(optionContract.connect(acct1).create(optionData, [])).to.emit(optionContract, "Created");
+      await expect(optionContract.connect(acct1).create(putOption, [])).to.emit(optionContract, "Created");
       expect(await optionContract.issuanceCounter()).to.equal(1);
 
       const option = await optionContract.issuance(0);
@@ -116,21 +120,41 @@ describe("Option", function () {
       expect(option.exercisedOptions).to.equal(0);
       expect(option.soldOptions).to.equal(0);
       expect(option.state).to.equal(1);
-      expect(option.data.side).to.equal(optionData.side);
-      expect(option.data.underlyingToken).to.equal(optionData.underlyingToken);
-      expect(option.data.amount).to.equal(optionData.amount);
-      expect(option.data.strikeToken).to.equal(optionData.strikeToken);
-      expect(option.data.strike).to.equal(optionData.strike);
-      expect(option.data.premiumToken).to.equal(optionData.premiumToken);
-      expect(option.data.premium).to.equal(optionData.premium);
-      expect(option.data.exerciseWindowStart).to.equal(optionData.exerciseWindowStart);
-      expect(option.data.exerciseWindowEnd).to.equal(optionData.exerciseWindowEnd);
-      expect(option.data.buyingWindowEnd).to.equal(optionData.buyingWindowEnd);
-      expect(option.data.minBuyingLot).to.equal(optionData.minBuyingLot);
-      expect(option.data.renounceable).to.equal(optionData.renounceable);
+      expect(option.data.side).to.equal(1);
+      expect(option.data.underlyingToken).to.equal(putOption.underlyingToken);
+      expect(option.data.amount).to.equal(putOption.amount);
+      expect(option.data.strikeToken).to.equal(putOption.strikeToken);
+      expect(option.data.strike).to.equal(putOption.strike);
+      expect(option.data.premiumToken).to.equal(putOption.premiumToken);
+      expect(option.data.premium).to.equal(putOption.premium);
+      expect(option.data.exerciseWindowStart).to.equal(putOption.exerciseWindowStart);
+      expect(option.data.exerciseWindowEnd).to.equal(putOption.exerciseWindowEnd);
+      expect(option.data.minBuyingLot).to.equal(putOption.minBuyingLot);
+      expect(option.data.renounceable).to.equal(putOption.renounceable);
 
       expect(await token2.balanceOf(optionContract.target)).to.equal(TOTAL_UNDERLYING_PRICE);
       expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE - TOTAL_UNDERLYING_PRICE);
+    });
+
+    it("Should fail to create an option because times are wrong", async function () {
+      const { callOption, optionContract, token1, acct1, currentTime } = await loadFixture(deployInfraFixture);
+      const OPTION_COUNT = 1 * 10 ** 6;
+
+      await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
+
+      const optionData = {
+        ...callOption,
+        exerciseWindowEnd: currentTime,
+      };
+      await expect(optionContract.connect(acct1).create(optionData, [])).to.be.revertedWith("exerciseWindowEnd");
+    });
+
+    it("Should fail to create an option because token transfer is not approved", async function () {
+      const { callOption, optionContract, acct1 } = await loadFixture(deployInfraFixture);
+
+      await expect(optionContract.connect(acct1).create(callOption, [])).to.be.revertedWith(
+        "ERC20: insufficient allowance"
+      );
     });
   });
 });
