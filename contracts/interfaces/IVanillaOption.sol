@@ -17,7 +17,6 @@ interface IVanillaOption {
         uint256 premium;
         uint256 exerciseWindowStart;
         uint256 exerciseWindowEnd;
-        uint256 buyingWindowEnd;
         uint256 minBuyingLot;
         bool renounceable;
     }

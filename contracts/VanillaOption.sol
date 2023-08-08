@@ -39,7 +39,6 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         VanillaOptionData memory optionData,
         address[] calldata allowedBuyerAddresses
     ) external nonReentrant returns (uint256) {
-        require(optionData.buyingWindowEnd > block.timestamp, "buyingWindowEnd");
         require(optionData.exerciseWindowEnd > block.timestamp, "exerciseWindowEnd");
 
         OptionIssuance memory newIssuance;
@@ -71,7 +70,7 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
 
     function buy(uint256 id, uint256 amount, bool mustCompletelyFill) external nonReentrant {
         require(issuance[id].state == State.Active, "state");
-        require(block.timestamp <= issuance[id].data.buyingWindowEnd, "buyingWindowEnd");
+        require(block.timestamp <= issuance[id].data.exerciseWindowEnd, "exceriseWindowEnd");
         require(_allowedBuyers[id].length() == 0 || _allowedBuyers[id].contains(_msgSender()), "allowedBuyers");
         require(amount >= issuance[id].data.minBuyingLot, "minBuyingLot");
 
