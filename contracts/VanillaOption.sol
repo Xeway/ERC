@@ -107,13 +107,15 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
                 block.timestamp <= issuance[id].data.exerciseWindowEnd,
             "timestamp"
         );
-        require(balanceOf(_msgSender(), id) >= amount, "amount");
+        require(balanceOf(_msgSender(), id) >= amount, "balance");
 
         IERC20 underlyingToken = IERC20(issuance[id].data.underlyingToken);
         IERC20 strikeToken = IERC20(issuance[id].data.strikeToken);
-        uint256 underlyingDecimals = underlyingToken.decimals();
+        uint256 underlyingDecimals = 10 ** underlyingToken.decimals();
 
-        uint256 transferredStrikeTokens = (issuance[id].data.strike * amount) / 10 ** underlyingDecimals;
+        uint256 remainder = (issuance[id].data.strike * amount) % underlyingDecimals;            
+        amount -= remainder / issuance[id].data.strike;
+        uint256 transferredStrikeTokens = (issuance[id].data.strike * amount) / underlyingDecimals;
         require(transferredStrikeTokens > 0, "transferredStrikeTokens");
         if (issuance[id].data.side == Side.Call) {
             // Buyer pays seller for the underlying token(s) at strike price
