@@ -80,11 +80,9 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         require(!mustCompletelyFill || buyerOptionCount == amount, "mustCompletelyFill");
 
         if (issuance[id].data.premium > 0) {
-            uint256 remainder = (buyerOptionCount * issuance[id].data.premium) % issuance[id].data.amount;  
-            // Adjust the amount of options being bought when modulo is not zero
-            buyerOptionCount -= remainder / issuance[id].data.premium;
+            uint256 remainder = (buyerOptionCount * issuance[id].data.premium) % issuance[id].data.amount;              
             uint256 premiumPaid = (buyerOptionCount * issuance[id].data.premium) / issuance[id].data.amount;
-            require(premiumPaid > 0, "premiumPaid");
+            if (remainder > 0) { premiumPaid += 1; }
 
             bool success = IERC20(issuance[id].data.premiumToken).transferFrom(
                 _msgSender(),
@@ -114,8 +112,16 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
         uint256 underlyingDecimals = 10 ** underlyingToken.decimals();
 
         uint256 remainder = (issuance[id].data.strike * amount) % underlyingDecimals;            
-        amount -= remainder / issuance[id].data.strike;
         uint256 transferredStrikeTokens = (issuance[id].data.strike * amount) / underlyingDecimals;
+        if (remainder > 0) {
+            if (issuance[id].data.side == Side.Call) {
+                transferredStrikeTokens += 1;
+            } else {
+                if (transferredStrikeTokens > 0) {
+                    transferredStrikeTokens--;
+                }                                
+            }
+        }        
         require(transferredStrikeTokens > 0, "transferredStrikeTokens");
         if (issuance[id].data.side == Side.Call) {
             // Buyer pays seller for the underlying token(s) at strike price
