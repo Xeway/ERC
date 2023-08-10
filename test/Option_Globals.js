@@ -41,8 +41,6 @@ async function deployInfraFixture() {
     premium: PREMIUM,
     exerciseWindowStart: currentTime,
     exerciseWindowEnd: currentTime + 60 * 60,
-    minBuyingLot: 1,
-    renounceable: true,
   };
 
   const putOption = {
@@ -55,8 +53,6 @@ async function deployInfraFixture() {
     premium: PREMIUM,
     exerciseWindowStart: currentTime,
     exerciseWindowEnd: currentTime + 60 * 60,
-    minBuyingLot: 1,
-    renounceable: true,
   };
 
   return {

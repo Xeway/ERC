@@ -16,7 +16,7 @@ describe("Canceling", function () {
 
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
 
-    await expect(optionContract.connect(acct1).create(callOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(OPTION_COUNT);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE - OPTION_COUNT);
@@ -34,7 +34,7 @@ describe("Canceling", function () {
   it("Should fail to cancel the option contract since option(s) are already bought", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
-    await expect(optionContract.connect(acct1).create(callOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(OPTION_COUNT);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE - OPTION_COUNT);
@@ -43,7 +43,7 @@ describe("Canceling", function () {
     const premiumPaid = (boughtOptions * PREMIUM) / OPTION_COUNT;
     const totalStrikePrice = (boughtOptions * callOption.strike) / TOKEN1_DECIMALS;
     await token2.connect(acct2).approve(optionContract.target, premiumPaid + totalStrikePrice);
-    await expect(optionContract.connect(acct2).buy(0, boughtOptions, false)).to.emit(optionContract, "Bought");
+    await expect(optionContract.connect(acct2).buy(0, boughtOptions)).to.emit(optionContract, "Bought");
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(OPTION_COUNT);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE - OPTION_COUNT);
@@ -60,7 +60,7 @@ describe("Canceling", function () {
 
   it("Should fail to cancel since no issuance exists", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
-    await expect(optionContract.connect(acct1).cancel(0)).to.be.revertedWith("state");
+    await expect(optionContract.connect(acct1).cancel(0)).to.be.revertedWith("seller");
   });
 
   it("Should fail to cancel since the canceling party is not the seller", async function () {
@@ -68,7 +68,7 @@ describe("Canceling", function () {
 
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
 
-    await expect(optionContract.connect(acct1).create(callOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(OPTION_COUNT);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE - OPTION_COUNT);
