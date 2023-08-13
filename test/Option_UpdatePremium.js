@@ -3,13 +3,9 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const {
   deployInfraFixture,
-  TOKEN1_DECIMALS,
-  TOKEN1_START_BALANCE,
   TOKEN2_START_BALANCE,
   OPTION_COUNT,
-  STRIKE,
   PREMIUM,
-  ZERO_ADDRESS,
 } = require("./Option_Globals");
 
 describe("Updating option premium", function () {
