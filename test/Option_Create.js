@@ -14,14 +14,13 @@ describe("Creation", function () {
 
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
 
-    await expect(optionContract.connect(acct1).create(callOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
     expect(await optionContract.issuanceCounter()).to.equal(1);
 
     const option = await optionContract.issuance(0);
     expect(option.seller).to.equal(acct1.address);
     expect(option.exercisedOptions).to.equal(0);
     expect(option.soldOptions).to.equal(0);
-    expect(option.state).to.equal(1);
     expect(option.data.side).to.equal(callOption.side);
     expect(option.data.underlyingToken).to.equal(callOption.underlyingToken);
     expect(option.data.amount).to.equal(callOption.amount);
@@ -44,14 +43,13 @@ describe("Creation", function () {
     const TOTAL_UNDERLYING_PRICE = (OPTION_COUNT * STRIKE) / 10 ** 6;
     await token2.connect(acct1).approve(optionContract.target, TOTAL_UNDERLYING_PRICE);
 
-    await expect(optionContract.connect(acct1).create(putOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(putOption)).to.emit(optionContract, "Created");
     expect(await optionContract.issuanceCounter()).to.equal(1);
 
     const option = await optionContract.issuance(0);
     expect(option.seller).to.equal(acct1.address);
     expect(option.exercisedOptions).to.equal(0);
     expect(option.soldOptions).to.equal(0);
-    expect(option.state).to.equal(1);
     expect(option.data.side).to.equal(1);
     expect(option.data.underlyingToken).to.equal(putOption.underlyingToken);
     expect(option.data.amount).to.equal(putOption.amount);
@@ -78,14 +76,12 @@ describe("Creation", function () {
       ...callOption,
       exerciseWindowEnd: currentTime,
     };
-    await expect(optionContract.connect(acct1).create(optionData, [])).to.be.revertedWith("exerciseWindowEnd");
+    await expect(optionContract.connect(acct1).create(optionData)).to.be.revertedWith("exerciseWindowEnd");
   });
 
   it("Should fail to create an option because token transfer is not approved", async function () {
     const { callOption, optionContract, acct1 } = await loadFixture(deployInfraFixture);
 
-    await expect(optionContract.connect(acct1).create(callOption, [])).to.be.revertedWith(
-      "ERC20: insufficient allowance"
-    );
+    await expect(optionContract.connect(acct1).create(callOption)).to.be.revertedWith("ERC20: insufficient allowance");
   });
 });

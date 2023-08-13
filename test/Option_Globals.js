@@ -1,5 +1,6 @@
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
 const TOKEN1_DECIMALS = 10 ** 6;
 const TOKEN1_START_BALANCE = 10 * TOKEN1_DECIMALS;
@@ -29,6 +30,8 @@ async function deployInfraFixture() {
   await token2.connect(acct2).faucet(TOKEN2_START_BALANCE);
   await token2.connect(acct3).faucet(TOKEN2_START_BALANCE);
 
+  const emptyBytes = ethers.AbiCoder.defaultAbiCoder().encode(["string"], [""]);
+  
   currentTime = await time.latest();
 
   const callOption = {
@@ -41,8 +44,7 @@ async function deployInfraFixture() {
     premium: PREMIUM,
     exerciseWindowStart: currentTime,
     exerciseWindowEnd: currentTime + 60 * 60,
-    minBuyingLot: 1,
-    renounceable: true,
+    data: emptyBytes
   };
 
   const putOption = {
@@ -55,8 +57,7 @@ async function deployInfraFixture() {
     premium: PREMIUM,
     exerciseWindowStart: currentTime,
     exerciseWindowEnd: currentTime + 60 * 60,
-    minBuyingLot: 1,
-    renounceable: true,
+    data: emptyBytes
   };
 
   return {

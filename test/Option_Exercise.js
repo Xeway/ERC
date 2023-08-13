@@ -14,13 +14,13 @@ describe("Exercising", function () {
   it("Should successfully exercise call options", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
-    await expect(optionContract.connect(acct1).create(callOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
 
     const boughtOptions = OPTION_COUNT / 10;
     const premiumPaid = (boughtOptions * PREMIUM) / OPTION_COUNT;
     const totalStrikePrice = (boughtOptions * callOption.strike) / TOKEN1_DECIMALS;
     await token2.connect(acct2).approve(optionContract.target, premiumPaid + totalStrikePrice);
-    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10, false)).to.emit(optionContract, "Bought");
+    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10)).to.emit(optionContract, "Bought");
 
     const exercisableOptions = await optionContract.balanceOf(acct2.address, 0);
     await expect(optionContract.connect(acct2).exercise(0, exercisableOptions)).to.emit(optionContract, "Exercised");
@@ -41,14 +41,14 @@ describe("Exercising", function () {
 
     const totalUnderlyingPrice = (OPTION_COUNT * STRIKE) / 10 ** 6;
     await token2.connect(acct1).approve(optionContract.target, totalUnderlyingPrice);
-    await expect(optionContract.connect(acct1).create(putOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(putOption)).to.emit(optionContract, "Created");
 
     const boughtOptions = OPTION_COUNT / 10;
     const premiumPaid = (boughtOptions * PREMIUM) / OPTION_COUNT;
     const totalStrikePrice = (boughtOptions * putOption.strike) / TOKEN1_DECIMALS;
     await token1.connect(acct2).approve(optionContract.target, OPTION_COUNT / 10);
     await token2.connect(acct2).approve(optionContract.target, premiumPaid);
-    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10, false)).to.emit(optionContract, "Bought");
+    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10)).to.emit(optionContract, "Bought");
 
     const exercisableOptions = await optionContract.balanceOf(acct2.address, 0);
     await expect(optionContract.connect(acct2).exercise(0, exercisableOptions)).to.emit(optionContract, "Exercised");
@@ -67,13 +67,13 @@ describe("Exercising", function () {
   it("Should fail to exercise option because amount is zero", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
-    await expect(optionContract.connect(acct1).create(callOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
 
     const boughtOptions = OPTION_COUNT / 10;
     const premiumPaid = (boughtOptions * PREMIUM) / OPTION_COUNT;
     const totalStrikePrice = (boughtOptions * callOption.strike) / TOKEN1_DECIMALS;
     await token2.connect(acct2).approve(optionContract.target, premiumPaid + totalStrikePrice);
-    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10, false)).to.emit(optionContract, "Bought");
+    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10)).to.emit(optionContract, "Bought");
 
     const exercisableOptions = await optionContract.balanceOf(acct2.address, 0);
     await expect(optionContract.connect(acct2).exercise(0, 0)).to.be.rejectedWith("amount");
@@ -81,7 +81,7 @@ describe("Exercising", function () {
 
   it("Should fail to exercise option because there is no issuance", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
-    await expect(optionContract.connect(acct2).exercise(0, OPTION_COUNT)).to.be.rejectedWith("state");
+    await expect(optionContract.connect(acct2).exercise(0, OPTION_COUNT)).to.be.rejectedWith("timestamp");
   });
 
   it("Should fail to exercise option because exercise window is not yet open", async function () {
@@ -93,12 +93,12 @@ describe("Exercising", function () {
       exerciseWindowStart: currentTime + 15 * 60,
     };
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
-    await expect(optionContract.connect(acct1).create(callOption2, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(callOption2)).to.emit(optionContract, "Created");
     const boughtOptions = OPTION_COUNT / 10;
     const premiumPaid = (boughtOptions * PREMIUM) / OPTION_COUNT;
     const totalStrikePrice = (boughtOptions * callOption.strike) / TOKEN1_DECIMALS;
     await token2.connect(acct2).approve(optionContract.target, premiumPaid + totalStrikePrice);
-    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10, false)).to.emit(optionContract, "Bought");
+    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10)).to.emit(optionContract, "Bought");
 
     const exercisableOptions = await optionContract.balanceOf(acct2.address, 0);
     await expect(optionContract.connect(acct2).exercise(0, exercisableOptions)).to.revertedWith("timestamp");
@@ -107,12 +107,12 @@ describe("Exercising", function () {
   it("Should fail to exercise option because exercise window is closed", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
-    await expect(optionContract.connect(acct1).create(callOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
     const boughtOptions = OPTION_COUNT / 10;
     const premiumPaid = (boughtOptions * PREMIUM) / OPTION_COUNT;
     const totalStrikePrice = (boughtOptions * callOption.strike) / TOKEN1_DECIMALS;
     await token2.connect(acct2).approve(optionContract.target, premiumPaid + totalStrikePrice);
-    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10, false)).to.emit(optionContract, "Bought");
+    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10)).to.emit(optionContract, "Bought");
 
     const exercisableOptions = await optionContract.balanceOf(acct2.address, 0);
     await time.increase(2 * 60 * 60);
@@ -122,13 +122,13 @@ describe("Exercising", function () {
   it("Should adjust pricing for call because of the rounding of transferred tokens", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
-    await expect(optionContract.connect(acct1).create(callOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
 
     const boughtOptions = OPTION_COUNT / 10;
     const premiumPaid = (boughtOptions * PREMIUM) / OPTION_COUNT;
     const totalStrikePrice = (boughtOptions * callOption.strike) / TOKEN1_DECIMALS;
     await token2.connect(acct2).approve(optionContract.target, premiumPaid + totalStrikePrice);
-    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10, false)).to.emit(optionContract, "Bought");
+    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10)).to.emit(optionContract, "Bought");
 
     await expect(optionContract.connect(acct2).exercise(0, 1)).to.emit(optionContract, "Exercised");
 
@@ -148,14 +148,14 @@ describe("Exercising", function () {
 
     const totalUnderlyingPrice = (OPTION_COUNT * STRIKE) / 10 ** 6;
     await token2.connect(acct1).approve(optionContract.target, totalUnderlyingPrice);
-    await expect(optionContract.connect(acct1).create(putOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(putOption)).to.emit(optionContract, "Created");
 
     const boughtOptions = OPTION_COUNT / 10;
     const premiumPaid = (boughtOptions * PREMIUM) / OPTION_COUNT;
     const totalStrikePrice = (boughtOptions * putOption.strike) / TOKEN1_DECIMALS;
     await token1.connect(acct2).approve(optionContract.target, OPTION_COUNT / 10);
     await token2.connect(acct2).approve(optionContract.target, premiumPaid);
-    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10, false)).to.emit(optionContract, "Bought");
+    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10)).to.emit(optionContract, "Bought");
     await expect(optionContract.connect(acct2).exercise(0, 5)).to.emit(optionContract, "Exercised");
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(0);
@@ -174,14 +174,14 @@ describe("Exercising", function () {
 
     const totalUnderlyingPrice = (OPTION_COUNT * STRIKE) / 10 ** 6;
     await token2.connect(acct1).approve(optionContract.target, totalUnderlyingPrice);
-    await expect(optionContract.connect(acct1).create(putOption, [])).to.emit(optionContract, "Created");
+    await expect(optionContract.connect(acct1).create(putOption)).to.emit(optionContract, "Created");
 
     const boughtOptions = OPTION_COUNT / 10;
     const premiumPaid = (boughtOptions * PREMIUM) / OPTION_COUNT;
     const totalStrikePrice = (boughtOptions * putOption.strike) / TOKEN1_DECIMALS;
     await token1.connect(acct2).approve(optionContract.target, OPTION_COUNT / 10);
     await token2.connect(acct2).approve(optionContract.target, premiumPaid);
-    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10, false)).to.emit(optionContract, "Bought");
+    await expect(optionContract.connect(acct2).buy(0, OPTION_COUNT / 10)).to.emit(optionContract, "Bought");
     await expect(optionContract.connect(acct2).exercise(0, 1)).to.be.rejectedWith("transferredStrikeTokens");
   });
 });
