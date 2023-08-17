@@ -97,7 +97,9 @@ Token used as a reference to determine the strike price.
 
 **Type: `uint256`**
 
-Strike price. Note that the strike price is a price per one underlying token. The option buyer may be (depending on the contract implementation) able to exercise only fraction of the options and the paid strike price must be adjusted by the contract to reflect it.
+Strike price. The option buyer may be (depending on the contract implementation) able to exercise only fraction of the options and the paid strike price must be adjusted by the contract to reflect it.
+
+Note that `strike` is set for exercising the total `amount` of options.
 
 > Be aware of token decimals!
 
@@ -278,7 +280,7 @@ To create the contract, he will give the following parameters:
 - `underlyingToken`: **0x514910771AF9Ca656af840dff83E8264EcF986CA** *(LINK's address)*
 - `amount`: **8000000000000000000** *(8 \* 10^(LINK's decimals))*
 - `strikeToken`: **0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48** *(USDC's address)*
-- `strike`: **25000000** *(25 \* 10^(USDC's decimals))*
+- `strike`: **200000000** *(8 * 25 \* 10^(USDC's decimals))*
 - `premiumToken`: **0x6B175474E89094C44Da98b954EedeAC495271d0F** *(DAI's address)*
 - `premium`: **10000000000000000000** *(10 \* 10^(DAI's decimals))*
 - `exerciseWindowStart`: **1689292800** *(2023-07-14 timestamp)*
@@ -305,7 +307,7 @@ To create the contract, he will give the following parameters:
 - `underlyingToken`: **0x514910771AF9Ca656af840dff83E8264EcF986CA** *(LINK's address)*
 - `amount`: **8000000000000000000** *(8 \* 10^(LINK's decimals))*
 - `strikeToken`: **0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48** *(USDC's address)*
-- `strike`: **25000000** *(25 \* 10^(USDC's decimals))*
+- `strike`: **200000000** *(8 \* 25 \* 10^(USDC's decimals))*
 - `premiumToken`: **0x6B175474E89094C44Da98b954EedeAC495271d0F** *(DAI's address)*
 - `premium`: **10000000000000000000** *(10 \* 10^(DAI's decimals))*
 - `exerciseWindowStart`: **1689292800** *(2023-07-14 timestamp)*
