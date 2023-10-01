@@ -87,6 +87,8 @@ Underlying token.
 
 Maximum amount of the underlying tokens that can be exercised.
 
+> Be aware of token decimals!
+
 #### `strikeToken`
 
 **Type: `address` (`IERC20`)**
@@ -121,14 +123,14 @@ Note that the premium price is set for exercising the total `amount` of options.
 
 #### `exerciseWindowStart`
 
-**Type: `uint256`**
+**Type: `uint256`**\
 **Format: *timestamp as seconds since unix epoch***
 
 Option exercising window start time. When current time is greater or equal to `exerciseWindowStart` and below or equal to `exerciseWindowEnd`, owner of option(s) can exercise them. 
 
 #### `exerciseWindowEnd`
 
-**Type: `uint256`**
+**Type: `uint256`**\
 **Format: *timestamp as seconds since unix epoch***
 
 Option exercising window end time. When current time is greater or equal to `exerciseWindowStart` and below or equal to `exerciseWindowEnd`, owner of option(s) can exercise them. When current time is greater than `exerciseWindowEnd`, option holder can't exercise and writer can retrieve remaining underlying (call) or strike (put) tokens.
@@ -291,7 +293,7 @@ Once the contract created, Bob has to transfer the collateral to the contract. T
 
 Alice for its part, has to allow the spending of his 10 DAI by calling `approve(address spender, uint256 amount)` on the DAI's contract and give as parameters the contract's address (`spender`) and for `amount`: **10000000000000000000**. She can then execute `buy` on the contract in order to buy the option.
 
-We're on the 15th of July and Alice wants to exercise her options because 1 LINK is traded at 50 USC! She needs to allow the contract to transfer **8 * 25000000** USDCs from her account to match the required strike funding. When she calls `exercise` on the contract, the contract will transfer the strike funding to Bob and the LINK tokens that Bob gave as collateral during `create` call to Alice.
+We're on the 15th of July and Alice wants to exercise her options because 1 LINK is traded at 50 USDC! She needs to allow the contract to transfer **8 * 25000000** USDCs from her account to match the required strike funding. When she calls `exercise` on the contract, the contract will transfer the strike funding to Bob and the LINK tokens that Bob gave as collateral during `create` call to Alice.
 
 If she decides to sell the LINK tokens, she just made a profit of 8\*50 - 8\*25 = 200 USDC!
 
@@ -318,7 +320,7 @@ Bob has to transfer collateral to the contract. This collateral corresponds to t
 
 Alice for her part has to allow the spending of **10 DAI** by calling `approve(address spender, uint256 amount)` on the DAI's contract, with as parameters the contract's address (`spender`) and for `amount`: **10000000000000000000**. Then, she can execute `buy` on the contract in order to buy all the options.
 
-We're on the 15th of July, and Alice wants to exercise her options because 1 LINK is traded at only 10 USC! To exercise she has to approve the transferring of **8 LINK** tokens and call `exercise` on the contract. Bob receives 8 LINK tokens, and Alice 200 USDC (8 LINK \* 25 USDC). She just made a profit of 200 - 8\*10 = 120 USDC!
+We're on the 15th of July, and Alice wants to exercise her options because 1 LINK is traded at only 10 USDC! To exercise she has to approve the transferring of **8 LINK** tokens and call `exercise` on the contract. Bob receives 8 LINK tokens, and Alice 200 USDC (8 LINK \* 25 USDC). She just made a profit of 200 - 8\*10 = 120 USDC!
 
 #### Retrieve collateral
 
