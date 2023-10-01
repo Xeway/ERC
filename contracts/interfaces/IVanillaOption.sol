@@ -27,7 +27,7 @@ interface IVanillaOption {
     event Canceled(uint256 indexed id);
     event PremiumUpdated(uint256 indexed id, uint256 amount);
 
-    function create(VanillaOptionData memory optionData) external returns (uint256);
+    function create(VanillaOptionData calldata optionData) external returns (uint256);
 
     function buy(uint256 id, uint256 amount) external;
 

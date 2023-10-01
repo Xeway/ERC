@@ -50,7 +50,7 @@ interface IERC7390 {
     event Canceled(uint256 indexed id);
     event PremiumUpdated(uint256 indexed id, uint256 amount);
 
-    function create(VanillaOptionData memory optionData) external returns (uint256);
+    function create(VanillaOptionData calldata optionData) external returns (uint256);
 
     function buy(uint256 id, uint256 amount) external;
 
@@ -146,7 +146,7 @@ Additional data that can be passed to contract function as a part of option issu
 #### `create`
 
 ```solidity
-function create(VanillaOptionData memory optionData) external returns (uint256);
+function create(VanillaOptionData calldata optionData) external returns (uint256);
 ```
 
 Option writer creates new option tokens and defines the option parameters using `create()`. As an argument, option writer needs to fill `VanillaOptionData` data structure instance and pass it to the method. As a part of creating the option tokens, the function transfers the collateral from option seller to the contract.
