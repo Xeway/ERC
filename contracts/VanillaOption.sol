@@ -23,7 +23,7 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
     constructor() ERC1155("") ReentrancyGuard() {}
 
     function create(
-        VanillaOptionData memory optionData
+        VanillaOptionData calldata optionData
     ) external nonReentrant returns (uint256) {
         require(optionData.exerciseWindowEnd > block.timestamp, "exerciseWindowEnd");
 
