@@ -17,7 +17,6 @@ interface IVanillaOption {
         uint256 premium;
         uint256 exerciseWindowStart;
         uint256 exerciseWindowEnd;
-        bytes data;
     }
 
     event Created(uint256 indexed id);
