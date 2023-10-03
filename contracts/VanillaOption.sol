@@ -144,6 +144,8 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
 
     function updatePremium(uint256 id, uint256 amount) external nonReentrant {
         require(_msgSender() == issuance[id].seller, "seller");
+        require(block.timestamp <= issuance[id].data.exerciseWindowEnd, "exerciseWindowEnd");
+        
         issuance[id].data.premium = amount;
         emit PremiumUpdated(id, amount);
     }
