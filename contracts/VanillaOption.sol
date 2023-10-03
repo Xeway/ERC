@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import { IVanillaOption } from "./interfaces/IVanillaOption.sol";
-import { IERC20Metadata as IERC20 } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { ERC1155 } from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IVanillaOption} from "./interfaces/IVanillaOption.sol";
+import {IERC20Metadata as IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
     struct OptionIssuance {
@@ -50,18 +50,20 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
     }
 
     function buy(uint256 id, uint256 amount) external nonReentrant {
-        require(block.timestamp <= issuance[id].data.exerciseWindowEnd, "exceriseWindowEnd");
-        require(issuance[id].data.amount - issuance[id].soldOptions >= amount, "amount");        
-        require(amount > 0, "buyerOptionCount");
-        
-        if (issuance[id].data.premium > 0) {
-            uint256 remainder = (amount * issuance[id].data.premium) % issuance[id].data.amount;              
-            uint256 premiumPaid = (amount * issuance[id].data.premium) / issuance[id].data.amount;
-            if (remainder > 0) { premiumPaid += 1; }
+        OptionIssuance memory selectedIssuance = issuance[id];
 
-            bool success = IERC20(issuance[id].data.premiumToken).transferFrom(
+        require(amount > 0, "buyerOptionCount");
+        require(block.timestamp <= selectedIssuance.data.exerciseWindowEnd, "exceriseWindowEnd");
+        require(selectedIssuance.data.amount - selectedIssuance.soldOptions >= amount, "amount");
+
+        if (selectedIssuance.data.premium > 0) {
+            uint256 remainder = (amount * selectedIssuance.data.premium) % selectedIssuance.data.amount;
+            uint256 premiumPaid = (amount * selectedIssuance.data.premium) / selectedIssuance.data.amount;
+            if (remainder > 0) {premiumPaid += 1;}
+
+            bool success = IERC20(selectedIssuance.data.premiumToken).transferFrom(
                 _msgSender(),
-                issuance[id].seller,
+                selectedIssuance.seller,
                 premiumPaid
             );
             if (!success) revert("Transfer Failed");
@@ -73,40 +75,42 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
     }
 
     function exercise(uint256 id, uint256 amount) external nonReentrant {
+        OptionIssuance memory selectedIssuance = issuance[id];
+
         require(amount > 0, "amount");
+        require(balanceOf(_msgSender(), id) >= amount, "balance");
         require(
-            block.timestamp >= issuance[id].data.exerciseWindowStart &&
-                block.timestamp <= issuance[id].data.exerciseWindowEnd,
+            block.timestamp >= selectedIssuance.data.exerciseWindowStart &&
+            block.timestamp <= selectedIssuance.data.exerciseWindowEnd,
             "timestamp"
         );
-        require(balanceOf(_msgSender(), id) >= amount, "balance");
 
-        IERC20 underlyingToken = IERC20(issuance[id].data.underlyingToken);
-        IERC20 strikeToken = IERC20(issuance[id].data.strikeToken);
+        IERC20 underlyingToken = IERC20(selectedIssuance.data.underlyingToken);
+        IERC20 strikeToken = IERC20(selectedIssuance.data.strikeToken);
 
-        uint256 remainder = (amount * issuance[id].data.strike) % issuance[id].data.amount;              
-        uint256 transferredStrikeTokens = (amount * issuance[id].data.strike) / issuance[id].data.amount;        
+        uint256 remainder = (amount * selectedIssuance.data.strike) % selectedIssuance.data.amount;
+        uint256 transferredStrikeTokens = (amount * selectedIssuance.data.strike) / selectedIssuance.data.amount;
 
         if (remainder > 0) {
-            if (issuance[id].data.side == Side.Call) {
+            if (selectedIssuance.data.side == Side.Call) {
                 transferredStrikeTokens += 1;
             } else {
                 if (transferredStrikeTokens > 0) {
                     transferredStrikeTokens--;
-                }                                
+                }
             }
-        }     
+        }
 
         require(transferredStrikeTokens > 0, "transferredStrikeTokens");
-        if (issuance[id].data.side == Side.Call) {
+        if (selectedIssuance.data.side == Side.Call) {
             // Buyer pays seller for the underlying token(s) at strike price
-            _transferFrom(strikeToken, _msgSender(), issuance[id].seller, transferredStrikeTokens);
+            _transferFrom(strikeToken, _msgSender(), selectedIssuance.seller, transferredStrikeTokens);
 
             // Transfer underlying token(s) to buyer
             _transfer(underlyingToken, _msgSender(), amount);
         } else {
             // Buyer transfers the underlying token(s) to writer
-            _transferFrom(underlyingToken, _msgSender(), issuance[id].seller, amount);
+            _transferFrom(underlyingToken, _msgSender(), selectedIssuance.seller, amount);
 
             // Pay buyer the strike price
             _transfer(strikeToken, _msgSender(), transferredStrikeTokens);
@@ -120,12 +124,14 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
     }
 
     function retrieveExpiredTokens(uint256 id) external nonReentrant {
-        require(_msgSender() == issuance[id].seller, "seller");
-        require(block.timestamp > issuance[id].data.exerciseWindowEnd, "exerciseWindowEnd");
+        OptionIssuance memory selectedIssuance = issuance[id];
 
-        if (issuance[id].data.amount > issuance[id].exercisedOptions) {
-            uint256 underlyingTokenGiveback = issuance[id].data.amount - issuance[id].exercisedOptions;
-            _transfer(IERC20(issuance[id].data.underlyingToken), _msgSender(), underlyingTokenGiveback);
+        require(_msgSender() == selectedIssuance.seller, "seller");
+        require(block.timestamp > selectedIssuance.data.exerciseWindowEnd, "exerciseWindowEnd");
+
+        if (selectedIssuance.data.amount > selectedIssuance.exercisedOptions) {
+            uint256 underlyingTokenGiveback = selectedIssuance.data.amount - selectedIssuance.exercisedOptions;
+            _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), underlyingTokenGiveback);
         }
 
         delete issuance[id];
@@ -133,19 +139,23 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
     }
 
     function cancel(uint256 id) external nonReentrant {
-        require(_msgSender() == issuance[id].seller, "seller");
-        require(issuance[id].soldOptions == 0, "soldOptions");
+        OptionIssuance memory selectedIssuance = issuance[id];
 
-        _transfer(IERC20(issuance[id].data.underlyingToken), _msgSender(), issuance[id].data.amount);
+        require(_msgSender() == selectedIssuance.seller, "seller");
+        require(selectedIssuance.soldOptions == 0, "soldOptions");
+
+        _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), selectedIssuance.data.amount);
 
         delete issuance[id];
         emit Canceled(id);
     }
 
     function updatePremium(uint256 id, uint256 amount) external nonReentrant {
-        require(_msgSender() == issuance[id].seller, "seller");
-        require(block.timestamp <= issuance[id].data.exerciseWindowEnd, "exerciseWindowEnd");
-        
+        OptionIssuance memory selectedIssuance = issuance[id];
+
+        require(_msgSender() == selectedIssuance.seller, "seller");
+        require(block.timestamp <= selectedIssuance.data.exerciseWindowEnd, "exerciseWindowEnd");
+
         issuance[id].data.premium = amount;
         emit PremiumUpdated(id, amount);
     }
@@ -166,5 +176,5 @@ contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
 
     function _burn(address from, uint256 id, uint256 amount) internal override {
         super._burn(from, id, amount);
-    }    
+    }
 }
