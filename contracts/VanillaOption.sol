@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {IVanillaOption} from "./interfaces/IVanillaOption.sol";
+import {IERC7390} from "./interfaces/IERC7390.sol";
 import {IERC20Metadata as IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract VanillaOption is IVanillaOption, ERC1155, ReentrancyGuard {
+contract VanillaOption is IERC7390, ERC1155, ReentrancyGuard {
     struct OptionIssuance {
         VanillaOptionData data;
         address seller;

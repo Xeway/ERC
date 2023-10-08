@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-interface IVanillaOption {
+interface IERC7390 {
     enum Side {
         Call,
         Put
