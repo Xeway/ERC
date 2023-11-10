@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const optionFactory = await ethers.getContractFactory("VanillaOption");
+  const optionFactory = await ethers.getContractFactory("ERC7390");
   const option = await optionFactory.deploy();
   const contractAddress = await option.getAddress();
 
