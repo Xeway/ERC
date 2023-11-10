@@ -8,23 +8,14 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract VanillaOption is IERC7390, ERC1155, ReentrancyGuard {
-    struct OptionIssuance {
-        VanillaOptionData data;
-        address seller;
-        uint256 exercisedOptions;
-        uint256 soldOptions;
-    }
-
-    mapping(uint256 => OptionIssuance) public issuance;
-    uint256 public issuanceCounter;
+abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
+    mapping(uint256 => OptionIssuance) private _issuance;
+    uint256 private _issuanceCounter;
 
     /* solhint-disable-next-line no-empty-blocks */
     constructor() ERC1155("") ReentrancyGuard() {}
 
-    function create(
-        VanillaOptionData calldata optionData
-    ) external nonReentrant returns (uint256) {
+    function create(VanillaOptionData calldata optionData) public virtual nonReentrant returns (uint256) {
         require(optionData.exerciseWindowEnd > block.timestamp, "exerciseWindowEnd");
 
         OptionIssuance memory newIssuance;
@@ -43,14 +34,17 @@ contract VanillaOption is IERC7390, ERC1155, ReentrancyGuard {
             );
         }
 
-        issuance[issuanceCounter++] = newIssuance;
-        emit Created(issuanceCounter - 1);
+        uint256 issuanceId = _issuanceCounter;
 
-        return issuanceCounter - 1;
+        _issuance[issuanceId] = newIssuance;
+        emit Created(issuanceId);
+        _issuanceCounter++;
+
+        return issuanceId;
     }
 
-    function buy(uint256 id, uint256 amount) external nonReentrant {
-        OptionIssuance memory selectedIssuance = issuance[id];
+    function buy(uint256 id, uint256 amount) public virtual nonReentrant {
+        OptionIssuance memory selectedIssuance = _issuance[id];
 
         require(amount > 0, "buyerOptionCount");
         require(block.timestamp <= selectedIssuance.data.exerciseWindowEnd, "exceriseWindowEnd");
@@ -69,13 +63,13 @@ contract VanillaOption is IERC7390, ERC1155, ReentrancyGuard {
             if (!success) revert("Transfer Failed");
         }
 
-        issuance[id].soldOptions += amount;
+        _issuance[id].soldOptions += amount;
         _mint(_msgSender(), id, amount, bytes(""));
         emit Bought(id, amount, _msgSender());
     }
 
-    function exercise(uint256 id, uint256 amount) external nonReentrant {
-        OptionIssuance memory selectedIssuance = issuance[id];
+    function exercise(uint256 id, uint256 amount) public virtual nonReentrant {
+        OptionIssuance memory selectedIssuance = _issuance[id];
 
         require(amount > 0, "amount");
         require(balanceOf(_msgSender(), id) >= amount, "balance");
@@ -118,13 +112,13 @@ contract VanillaOption is IERC7390, ERC1155, ReentrancyGuard {
 
         // Burn used option tokens
         _burn(_msgSender(), id, amount);
-        issuance[id].exercisedOptions += amount;
+        _issuance[id].exercisedOptions += amount;
 
         emit Exercised(id, amount);
     }
 
-    function retrieveExpiredTokens(uint256 id) external nonReentrant {
-        OptionIssuance memory selectedIssuance = issuance[id];
+    function retrieveExpiredTokens(uint256 id) public virtual nonReentrant {
+        OptionIssuance memory selectedIssuance = _issuance[id];
 
         require(_msgSender() == selectedIssuance.seller, "seller");
         require(block.timestamp > selectedIssuance.data.exerciseWindowEnd, "exerciseWindowEnd");
@@ -134,30 +128,34 @@ contract VanillaOption is IERC7390, ERC1155, ReentrancyGuard {
             _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), underlyingTokenGiveback);
         }
 
-        delete issuance[id];
+        delete _issuance[id];
         emit Expired(id);
     }
 
-    function cancel(uint256 id) external nonReentrant {
-        OptionIssuance memory selectedIssuance = issuance[id];
+    function cancel(uint256 id) public virtual nonReentrant {
+        OptionIssuance memory selectedIssuance = _issuance[id];
 
         require(_msgSender() == selectedIssuance.seller, "seller");
         require(selectedIssuance.soldOptions == 0, "soldOptions");
 
         _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), selectedIssuance.data.amount);
 
-        delete issuance[id];
+        delete _issuance[id];
         emit Canceled(id);
     }
 
-    function updatePremium(uint256 id, uint256 amount) external nonReentrant {
-        OptionIssuance memory selectedIssuance = issuance[id];
+    function updatePremium(uint256 id, uint256 amount) public virtual nonReentrant {
+        OptionIssuance memory selectedIssuance = _issuance[id];
 
         require(_msgSender() == selectedIssuance.seller, "seller");
         require(block.timestamp <= selectedIssuance.data.exerciseWindowEnd, "exerciseWindowEnd");
 
-        issuance[id].data.premium = amount;
+        _issuance[id].data.premium = amount;
         emit PremiumUpdated(id, amount);
+    }
+
+    function issuance(uint256 id) public view virtual returns (OptionIssuance memory) {
+        return _issuance[id];
     }
 
     function _transfer(IERC20 token, address to, uint256 amount) internal {
