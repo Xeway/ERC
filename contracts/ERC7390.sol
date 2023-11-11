@@ -175,4 +175,10 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function _burn(address from, uint256 id, uint256 amount) internal override {
         super._burn(from, id, amount);
     }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155) returns (bool) {
+        return
+            interfaceId == type(IERC7390).interfaceId ||
+            super.supportsInterface(interfaceId);
+    }
 }
