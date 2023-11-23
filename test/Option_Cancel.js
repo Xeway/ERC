@@ -7,12 +7,13 @@ const {
   TOKEN2_START_BALANCE,
   OPTION_COUNT,
   PREMIUM,
+  STRIKE,
   ZERO_ADDRESS,
 } = require("./Option_Globals");
 
 describe("Canceling", function () {
-  it("Should cancel the option contract and return the underlying to seller", async function () {
-    const { callOption, optionContract, token1, acct1, currentTime } = await loadFixture(deployInfraFixture);
+  it("Should cancel the call option contract and return the underlying to seller", async function () {
+    const { callOption, optionContract, token1, acct1 } = await loadFixture(deployInfraFixture);
 
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
 
@@ -25,6 +26,26 @@ describe("Canceling", function () {
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(0);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE);
+
+    // Make sure data is deleted
+    const option = await optionContract.issuance(0);
+    expect(option.seller).to.equal(ZERO_ADDRESS);
+  });
+
+  it("Should cancel the put option contract and return the underlying to seller", async function() {
+    const { putOption, optionContract, token2, acct1 } = await loadFixture(deployInfraFixture);
+
+    await token2.connect(acct1).approve(optionContract.target, STRIKE);
+
+    await expect(optionContract.connect(acct1).create(putOption)).to.emit(optionContract, "Created");
+
+    expect(await token2.balanceOf(optionContract.target)).to.equal(STRIKE);
+    expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE - STRIKE);
+
+    await expect(optionContract.connect(acct1).cancel(0)).to.emit(optionContract, "Canceled");
+
+    expect(await token2.balanceOf(optionContract.target)).to.equal(0);
+    expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE);
 
     // Make sure data is deleted
     const option = await optionContract.issuance(0);
