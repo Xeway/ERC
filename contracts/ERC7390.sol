@@ -23,6 +23,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         newIssuance.seller = _msgSender();
 
         IERC20 underlyingToken = IERC20(optionData.underlyingToken);
+        newIssuance.totalStrikeTokenCount = (optionData.strike * optionData.amount) / 10 ** underlyingToken.decimals();
         if (optionData.side == Side.Call) {
             _transferFrom(underlyingToken, _msgSender(), address(this), optionData.amount);
         } else {
@@ -30,7 +31,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
                 IERC20(optionData.strikeToken),
                 _msgSender(),
                 address(this),
-                (optionData.strike * optionData.amount) / 10 ** underlyingToken.decimals()
+                newIssuance.totalStrikeTokenCount
             );
         }
 
@@ -103,6 +104,8 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
             // Transfer underlying token(s) to buyer
             _transfer(underlyingToken, _msgSender(), amount);
         } else {
+            require(selectedIssuance.transferredStrikeTokens + transferredStrikeTokens <= selectedIssuance.totalStrikeTokenCount);
+            
             // Buyer transfers the underlying token(s) to writer
             _transferFrom(underlyingToken, _msgSender(), selectedIssuance.seller, amount);
 
@@ -113,6 +116,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         // Burn used option tokens
         _burn(_msgSender(), id, amount);
         _issuance[id].exercisedOptions += amount;
+        _issuance[id].transferredStrikeTokens += transferredStrikeTokens;
 
         emit Exercised(id, amount);
     }
@@ -124,8 +128,13 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         require(block.timestamp > selectedIssuance.data.exerciseWindowEnd, "exerciseWindowEnd");
 
         if (selectedIssuance.data.amount > selectedIssuance.exercisedOptions) {
-            uint256 underlyingTokenGiveback = selectedIssuance.data.amount - selectedIssuance.exercisedOptions;
-            _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), underlyingTokenGiveback);
+            if (selectedIssuance.data.side == Side.Call) {
+                uint256 underlyingTokenGiveback = selectedIssuance.data.amount - selectedIssuance.exercisedOptions;
+                _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), underlyingTokenGiveback);
+            } else {
+                uint256 strikeTokenGiveback = selectedIssuance.totalStrikeTokenCount - selectedIssuance.transferredStrikeTokens;
+                _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), strikeTokenGiveback);
+            }                        
         }
 
         delete _issuance[id];
@@ -141,12 +150,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         if (selectedIssuance.data.side == Side.Call) {
             _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), selectedIssuance.data.amount);
         } else {
-            IERC20 underlyingToken = IERC20(selectedIssuance.data.underlyingToken);
-            _transfer(
-                IERC20(selectedIssuance.data.strikeToken),
-                _msgSender(),
-                (selectedIssuance.data.strike * selectedIssuance.data.amount) / 10 ** underlyingToken.decimals()
-            );          
+            _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), selectedIssuance.totalStrikeTokenCount);          
         }
 
         delete _issuance[id];

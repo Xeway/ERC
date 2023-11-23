@@ -24,6 +24,8 @@ interface IERC7390 {
         address seller;
         uint256 exercisedOptions;
         uint256 soldOptions;
+        uint256 transferredStrikeTokens;
+        uint256 totalStrikeTokenCount;
     }
 
     event Created(uint256 indexed id);
