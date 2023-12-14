@@ -23,7 +23,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         newIssuance.seller = _msgSender();
 
         IERC20 underlyingToken = IERC20(optionData.underlyingToken);
-        newIssuance.totalStrikeTokenCount = (optionData.strike * optionData.amount) / 10 ** underlyingToken.decimals();
+        newIssuance.strikeAmount = (optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals());
         if (optionData.side == Side.Call) {
             _transferFrom(underlyingToken, _msgSender(), address(this), optionData.amount);
         } else {
@@ -31,7 +31,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
                 IERC20(optionData.strikeToken),
                 _msgSender(),
                 address(this),
-                newIssuance.totalStrikeTokenCount
+                newIssuance.strikeAmount
             );
         }
 
@@ -54,7 +54,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         if (selectedIssuance.data.premium > 0) {
             uint256 remainder = (amount * selectedIssuance.data.premium) % selectedIssuance.data.amount;
             uint256 premiumPaid = (amount * selectedIssuance.data.premium) / selectedIssuance.data.amount;
-            if (remainder > 0) {premiumPaid += 1;}
+            if (remainder > 0) premiumPaid++;
 
             bool success = IERC20(selectedIssuance.data.premiumToken).transferFrom(
                 _msgSender(),
@@ -84,39 +84,39 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         IERC20 strikeToken = IERC20(selectedIssuance.data.strikeToken);
 
         uint256 remainder = (amount * selectedIssuance.data.strike) % selectedIssuance.data.amount;
-        uint256 transferredStrikeTokens = (amount * selectedIssuance.data.strike) / selectedIssuance.data.amount;
+        uint256 transferredStrikeAmount = (amount * selectedIssuance.data.strike) / selectedIssuance.data.amount;
 
         if (remainder > 0) {
             if (selectedIssuance.data.side == Side.Call) {
-                transferredStrikeTokens += 1;
+                transferredStrikeAmount++;
             } else {
-                if (transferredStrikeTokens > 0) {
-                    transferredStrikeTokens--;
+                if (transferredStrikeAmount > 0) {
+                    transferredStrikeAmount--;
                 }
             }
         }
 
-        require(transferredStrikeTokens > 0, "transferredStrikeTokens");
+        require(transferredStrikeAmount > 0, "transferredStrikeAmount");
         if (selectedIssuance.data.side == Side.Call) {
             // Buyer pays seller for the underlying token(s) at strike price
-            _transferFrom(strikeToken, _msgSender(), selectedIssuance.seller, transferredStrikeTokens);
+            _transferFrom(strikeToken, _msgSender(), selectedIssuance.seller, transferredStrikeAmount);
 
             // Transfer underlying token(s) to buyer
             _transfer(underlyingToken, _msgSender(), amount);
         } else {
-            require(selectedIssuance.transferredStrikeTokens + transferredStrikeTokens <= selectedIssuance.totalStrikeTokenCount);
-            
+            require(selectedIssuance.transferredStrikeAmount + transferredStrikeAmount <= selectedIssuance.strikeAmount, "Exercise amount exceeds strike amount");
+
             // Buyer transfers the underlying token(s) to writer
             _transferFrom(underlyingToken, _msgSender(), selectedIssuance.seller, amount);
 
             // Pay buyer the strike price
-            _transfer(strikeToken, _msgSender(), transferredStrikeTokens);
+            _transfer(strikeToken, _msgSender(), transferredStrikeAmount);
         }
 
         // Burn used option tokens
         _burn(_msgSender(), id, amount);
         _issuance[id].exercisedOptions += amount;
-        _issuance[id].transferredStrikeTokens += transferredStrikeTokens;
+        _issuance[id].transferredStrikeAmount += transferredStrikeAmount;
 
         emit Exercised(id, amount);
     }
@@ -132,7 +132,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
                 uint256 underlyingTokenGiveback = selectedIssuance.data.amount - selectedIssuance.exercisedOptions;
                 _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), underlyingTokenGiveback);
             } else {
-                uint256 strikeTokenGiveback = selectedIssuance.totalStrikeTokenCount - selectedIssuance.transferredStrikeTokens;
+                uint256 strikeTokenGiveback = selectedIssuance.strikeAmount - selectedIssuance.transferredStrikeAmount;
                 _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), strikeTokenGiveback);
             }                        
         }
@@ -150,7 +150,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         if (selectedIssuance.data.side == Side.Call) {
             _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), selectedIssuance.data.amount);
         } else {
-            _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), selectedIssuance.totalStrikeTokenCount);          
+            _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), selectedIssuance.strikeAmount);          
         }
 
         delete _issuance[id];
