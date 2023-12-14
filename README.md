@@ -283,7 +283,7 @@ Emitted when seller updates the premium to `amount` for option issuance with giv
 
 Let's say Bob sells an **call** option that Alice wants to buy.\
 He gives the right to Alice to buy **8 LINK** tokens at **25 USDC** each between **14th of July 2023** and **16th of July 2023**.\
-For such a contract, he asks Alice to give him **10 DAI** as a premium.\
+For such a contract, he asks Alice to give him **10 DAI** as a premium.
 
 To create the contract, he will give the following parameters:
 
@@ -309,7 +309,7 @@ If she decides to sell the LINK tokens, she just made a profit of 8\*50 - 8\*25 
 
 Let's say Bob sells a put option to Alice.\
 He gives the right to Alice to sell **8 LINK** tokens at **25 USDC** each between **14th of July 2023** and **16th of July 2023**.\
-For such a contract, he asks Alice to give him **10 DAI** as a premium.\
+For such a contract, he asks Alice to give him **10 DAI** as a premium.
 
 To create the contract, he will give the following parameters:
 
