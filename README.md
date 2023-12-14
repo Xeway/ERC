@@ -142,12 +142,6 @@ Option exercising window start time. When current time is greater or equal to `e
 
 Option exercising window end time. When current time is greater or equal to `exerciseWindowStart` and below or equal to `exerciseWindowEnd`, owner of option(s) can exercise them. When current time is greater than `exerciseWindowEnd`, option holder can't exercise and writer can retrieve remaining underlying (call) or strike (put) tokens.
 
-#### `data`
-
-**Type: `bytes`**
-
-Additional data that can be passed to contract function as a part of option issuance to add flexibility. For standard vanilla options this field is zero-sized array.
-
 ### Function Descriptions
 
 #### `create`
@@ -241,7 +235,7 @@ Returns all the key information for the option issuance with the given `id`.
 event Created(uint256 id);
 ```
 
-Emitted when the writer has provided option issuance data successfully (and locked down the collateral to the contract). The given `id` identifies the particualr option issuance.
+Emitted when the writer has provided option issuance data successfully (and locked down the collateral to the contract). The given `id` identifies the particular option issuance.
 
 #### `Bought`
 
@@ -302,7 +296,6 @@ To create the contract, he will give the following parameters:
 - `premium`: **10000000000000000000** *(10 \* 10^(DAI's decimals))*
 - `exerciseWindowStart`: **1689292800** *(2023-07-14 timestamp)*
 - `exerciseWindowEnd`: **1689465600** *(2023-07-16 timestamp)*
-- `data`: **[]**
 
 Once the contract created, Bob has to transfer the collateral to the contract. This collateral corresponds to the tokens he will have to give Alice if she decides to exercise the option. For this option, he has to give as collateral 8 LINK. He does that by calling the function `approve(address spender, uint256 amount)` on the LINK's contract and as parameters the contract's address (`spender`) and for `amount`: **8000000000000000000**. Then Bob can execute `create` on the contract for issuing the options.
 
@@ -329,7 +322,6 @@ To create the contract, he will give the following parameters:
 - `premium`: **10000000000000000000** *(10 \* 10^(DAI's decimals))*
 - `exerciseWindowStart`: **1689292800** *(2023-07-14 timestamp)*
 - `exerciseWindowEnd`: **1689465600** *(2023-07-16 timestamp)*
-- `data`: **[]**
 
 Bob has to transfer collateral to the contract. This collateral corresponds to the funds he will have to give to Alice if she decides to exercise all the options. He has to give as collateral 200 USDC (8 \* 25) and does that by calling the function `approve(address spender, uint256 amount)` on the USDC's contract. As parameters he will give the contract's address (`spender`) and for `amount`: **200000000** *(`strike`\*`amount` / 10^(LINK's decimals))*. Then he can execute `create` on the contract for issuing the options.
 
@@ -359,7 +351,7 @@ For preventing clear arbitrage cases when option seller considers the issuance t
 
 Once again, we advise writers to frequently check the underlying token price, and take the best decision for them.
 
-**Improvement idea:** if two users agreed for an option off-chain and they want to create it on-chain, there is a risk that between the creation of the contract and the purchase by the second user, an on-chain user has already bought the contract. An implementation of ERC-7390 interface might want to add the allowed addresses e.g. to `data` variable or via a separate function call to define the allowed addresses that can buy options.
+**Improvement idea:** if two users agreed for an option off-chain and they want to create it on-chain, there is a risk that between the creation of the contract and the purchase by the second user, an on-chain user has already bought the contract. An implementation of ERC-7390 interface might want to add the allowed addresses e.g. via a separate function call to define the allowed addresses that can buy options.
 
 ## Copyright
 
