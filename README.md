@@ -46,7 +46,7 @@ interface IERC7390 {
         VanillaOptionData data;
         address seller;
         uint256 exercisedOptions;
-        uint256 soldOptions;
+        uint256 soldAmount;
     }
 
     event Created(uint256 indexed id);

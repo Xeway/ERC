@@ -52,7 +52,7 @@ describe("Canceling", function () {
     expect(await token2.balanceOf(acct2.address)).to.equal(TOKEN2_START_BALANCE - premiumPaid);
     expect(await optionContract.balanceOf(acct2.address, 0)).to.equal(boughtOptions);
 
-    await expect(optionContract.connect(acct1).cancel(0)).to.be.revertedWith("soldOptions");
+    await expect(optionContract.connect(acct1).cancel(0)).to.be.revertedWith("soldAmount");
 
     const option = await optionContract.issuance(0);
     expect(option.seller).to.not.equal(ZERO_ADDRESS);

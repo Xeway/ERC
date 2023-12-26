@@ -48,7 +48,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
 
         require(amount > 0, "buyerOptionCount");
         require(block.timestamp <= selectedIssuance.data.exerciseWindowEnd, "exceriseWindowEnd");
-        require(selectedIssuance.data.amount - selectedIssuance.soldOptions >= amount, "amount");
+        require(selectedIssuance.data.amount - selectedIssuance.soldAmount >= amount, "amount");
 
         if (selectedIssuance.data.premium > 0) {
             uint256 remainder = (amount * selectedIssuance.data.premium) % selectedIssuance.data.amount;
@@ -63,7 +63,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
             if (!success) revert("Transfer Failed");
         }
 
-        _issuance[id].soldOptions += amount;
+        _issuance[id].soldAmount += amount;
         _mint(_msgSender(), id, amount, bytes(""));
         emit Bought(id, amount, _msgSender());
     }
@@ -136,7 +136,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
         require(_msgSender() == selectedIssuance.seller, "seller");
-        require(selectedIssuance.soldOptions == 0, "soldOptions");
+        require(selectedIssuance.soldAmount == 0, "soldAmount");
 
         _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), selectedIssuance.data.amount);
 
