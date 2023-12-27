@@ -4,9 +4,7 @@ pragma solidity ^0.8.19;
 import {IERC7390} from "./interfaces/IERC7390.sol";
 import {IERC20Metadata as IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     mapping(uint256 => OptionIssuance) private _issuance;
