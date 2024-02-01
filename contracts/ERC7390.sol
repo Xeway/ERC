@@ -4,9 +4,7 @@ pragma solidity ^0.8.19;
 import {IERC7390} from "./interfaces/IERC7390.sol";
 import {IERC20Metadata as IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     mapping(uint256 => OptionIssuance) private _issuance;
@@ -49,7 +47,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
 
         require(amount > 0, "buyerOptionCount");
         require(block.timestamp <= selectedIssuance.data.exerciseWindowEnd, "exceriseWindowEnd");
-        require(selectedIssuance.data.amount - selectedIssuance.soldOptions >= amount, "amount");
+        require(selectedIssuance.data.amount - selectedIssuance.soldAmount >= amount, "amount");
 
         if (selectedIssuance.data.premium > 0) {
             uint256 remainder = (amount * selectedIssuance.data.premium) % selectedIssuance.data.amount;
@@ -64,7 +62,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
             if (!success) revert("Transfer Failed");
         }
 
-        _issuance[id].soldOptions += amount;
+        _issuance[id].soldAmount += amount;
         _mint(_msgSender(), id, amount, bytes(""));
         emit Bought(id, amount, _msgSender());
     }

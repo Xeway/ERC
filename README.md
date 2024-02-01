@@ -8,16 +8,26 @@ status: Draft
 type: Standards Track
 category: ERC
 created: 2022-09-02
-requires: 20
+requires: 1155, 20
 ---
 
 ## Abstract
 
-This ERC defines a comprehensive set of functions and events facilitating seamless interactions (creation, management, exercising, etc.) for vanilla options. This standard ensures that options contracts conform to a common interface, facilitating the development of robust options trading platforms and enabling interoperability between dApps and protocols.
+This standard defines a comprehensive set of functions and events facilitating seamless interactions (creation, management, exercising, etc.) for vanilla options.
+
+Vanilla options grant the right, without obligation, to buy or sell an asset at a set price within a specified timeframe.
+
+This standard doesn't represent a simple option that would be useless after the expiration date. Instead, it can store as many issuance as needed. Each issuance is identified by an id, and can be bought, exercised, cancelled, etc. independently of the other issuances.\
+Every issuance is collateralized, meaning that the seller has to provide the collateral to the contract before the buyer can buy the option. The seller can retrieve the collateral if the buyer hasn't exercised in the exercise window.\
+A buyer can decide to buy only a fraction of the issuance (meaning multiple buyers is possible), and will receive accordingly tokens (ERC-1155) that represent the fraction of the issuance. These tokens can be exchanged between users, and are used for exercising the option. With this mechanism, a buyer can decide to exercise only a fraction of what he bought.\
+Also, the seller can decide to cancel the issuance if no option has been bought yet. He also has the right to update the premium price at any time. This doesn't affect the already bought options.\
+The underlying token, strike token and premium token are ERC-20 tokens.
 
 ## Motivation
 
-Options are widely used financial instruments that provide users with the right, but not the obligation, to buy or sell an underlying asset at a predetermined price within a specified timeframe. By introducing a standard interface for options contracts, we aim to foster a more inclusive and interoperable derivatives ecosystem on Ethereum. This standard will enhance the user experience and facilitate the development of decentralized options platforms, enabling users to seamlessly trade options across different applications.
+Options are widely used financial instruments, and have a true usefulness for investors and traders. It offers versatile risk management tools and speculative opportunities.\
+In the decentralized finance, many options-selling platform emerged, but each of these protocols implements their own definition of an option. This leads to incapabilities, which is a pity because options should be interoperable like fungible/non-fungible tokens are.\
+By introducing a standard interface for vanilla options contracts, we aim to foster a more inclusive and interoperable derivatives ecosystem. This standard will enhance the user experience and facilitate the development of decentralized options platforms, enabling users to seamlessly trade options across different applications. Moreover, this standard is designed to represent **vanilla** options, which are the most common type of options. This standard can be used as a base for more complex options, such as exotic options.
 
 ## Specification
 
@@ -46,7 +56,7 @@ interface IERC7390 {
         VanillaOptionData data;
         address seller;
         uint256 exercisedOptions;
-        uint256 soldOptions;
+        uint256 soldAmount;
     }
 
     event Created(uint256 indexed id);
