@@ -1,7 +1,7 @@
 ---
 eip: 7390
-title: Vanilla Option Standard
-description: A uniform interface streamlining the creation, management, and execution of vanilla options
+title: Vanilla Options for ERC-20 Tokens
+description: An interface for creating, managing, and executing simple time-limited call/put (vanilla) options.
 author: Ewan Humbert (@Xeway) <xeway@protonmail.com>, Lassi Maksimainen (@mlalma) <lassi.maksimainen@gmail.com>
 discussions-to: https://ethereum-magicians.org/t/erc-7390-vanilla-option-standard/15206
 status: Draft
@@ -94,7 +94,7 @@ Side of the option. Can take the value `Call` or `Put`. `Call` option gives the 
 
 #### `underlyingToken`
 
-**Type: `address` (`IERC20`)**
+**Type: `address` (ERC20 contract)**
 
 Underlying token.
 
@@ -108,7 +108,7 @@ Maximum amount of the underlying tokens that can be exercised.
 
 #### `strikeToken`
 
-**Type: `address` (`IERC20`)**
+**Type: `address` (ERC20 contract)**
 
 Token used as a reference to determine the strike price.
 
@@ -124,7 +124,7 @@ Note that `strike` is set for exercising the total `amount` of options.
 
 #### `premiumToken`
 
-**Type: `address` (`IERC20`)**
+**Type: `address` (ERC20 contract)**
 
 Premium token. 
 
@@ -351,7 +351,6 @@ Let's say Alice never exercised his option because it wasn't profitable enough f
 
 ## Rationale
 
-The proposed ERC option standard provides a simple yet powerful interface for options contracts on Ethereum. By standardizing the interface, it becomes easier for developers to build applications and platforms that support options trading, and users can seamlessly interact with different options contracts across multiple dApps.
 
 This contract's concept is oracle-free, because we assume that a rational buyer will exercise his option only if it's profitable for him.
 

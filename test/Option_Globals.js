@@ -13,7 +13,7 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 async function deployInfraFixture() {
   const [owner, acct1, acct2, acct3] = await ethers.getSigners();
 
-  const vanillaOption = await ethers.deployContract("ERC7390");
+  const vanillaOption = await ethers.deployContract("MockERC7390");
   await vanillaOption.waitForDeployment();
 
   const token1 = await ethers.deployContract("MockToken1");

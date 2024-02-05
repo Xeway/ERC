@@ -15,7 +15,6 @@ describe("Creation", function () {
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
 
     await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
-    expect(await optionContract.issuanceCounter()).to.equal(1);
 
     const option = await optionContract.issuance(0);
     expect(option.seller).to.equal(acct1.address);
@@ -44,7 +43,6 @@ describe("Creation", function () {
     await token2.connect(acct1).approve(optionContract.target, TOTAL_UNDERLYING_PRICE);
 
     await expect(optionContract.connect(acct1).create(putOption)).to.emit(optionContract, "Created");
-    expect(await optionContract.issuanceCounter()).to.equal(1);
 
     const option = await optionContract.issuance(0);
     expect(option.seller).to.equal(acct1.address);

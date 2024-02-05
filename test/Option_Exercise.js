@@ -216,6 +216,6 @@ describe("Exercising", function () {
     await token1.connect(acct2).approve(optionContract.target, boughtOptions);
     await token2.connect(acct2).approve(optionContract.target, premiumPaid);
     await expect(optionContract.connect(acct2).buy(0, boughtOptions)).to.emit(optionContract, "Bought");
-    await expect(optionContract.connect(acct2).exercise(0, 1)).to.be.rejectedWith("transferredStrikeTokens");
+    await expect(optionContract.connect(acct2).exercise(0, 1)).to.be.rejectedWith("transferredStrikeAmount");
   });
 });
