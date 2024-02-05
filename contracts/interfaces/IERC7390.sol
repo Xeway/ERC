@@ -23,7 +23,7 @@ interface IERC7390 {
         VanillaOptionData data;
         address seller;
         uint256 exercisedOptions;
-        uint256 soldOptions;
+        uint256 soldAmount;
         uint256 transferredStrikeAmount;
         uint256 strikeAmount;
     }

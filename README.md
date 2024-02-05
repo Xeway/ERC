@@ -126,7 +126,7 @@ Note that `strike` is set for exercising the total `amount` of options.
 
 **Type: `address` (ERC20 contract)**
 
-Premium token. 
+Premium token.
 
 #### `premium`
 
@@ -143,7 +143,7 @@ Note that the premium price is set for exercising the total `amount` of options.
 **Type: `uint256`**\
 **Format: *timestamp as seconds since unix epoch***
 
-Option exercising window start time. When current time is greater or equal to `exerciseWindowStart` and below or equal to `exerciseWindowEnd`, owner of option(s) can exercise them. 
+Option exercising window start time. When current time is greater or equal to `exerciseWindowStart` and below or equal to `exerciseWindowEnd`, owner of option(s) can exercise them.
 
 #### `exerciseWindowEnd`
 
@@ -182,7 +182,7 @@ Note that this standard does not define functionality for option seller to "re-u
 function buy(uint256 id, uint256 amount) external;
 ```
 
-Allows the option buyer to buy `amount` of options from option issuance with the defined `id`. 
+Allows the option buyer to buy `amount` of options from option issuance with the defined `id`.
 
 The buyer has to allow the token contract to transfer the (fraction of total) `premium` in the specified `premiumToken` to option seller. During the call of the function, the premium is be directly transferred to the seller.
 
@@ -251,7 +251,7 @@ Returns all the key information for the option issuance with the given `id`.
 event Created(uint256 id);
 ```
 
-Emitted when the writer has provided option issuance data successfully (and locked down the collateral to the contract). The given `id` identifies the particualr option issuance.
+Emitted when the writer has provided option issuance data successfully (and locked down the collateral to the contract). The given `id` identifies the particular option issuance.
 
 #### `Bought`
 
@@ -351,7 +351,6 @@ Let's say Alice never exercised his option because it wasn't profitable enough f
 
 ## Rationale
 
-
 This contract's concept is oracle-free, because we assume that a rational buyer will exercise his option only if it's profitable for him.
 
 The premium is to be determined by the option seller. Seller is free to choose how to calculate the premium, e.g. by using *Black-Scholes model* or something else. Seller can update the premium price at will in order to adjust it according to changes on the underlying's price, volatility, time to option expiry and other such factors. Computing the premium off-chain is better for gas costs purposes.
@@ -360,9 +359,9 @@ This ERC is intended to represent **vanilla** options. However, exotic options c
 
 ## Security Considerations
 
-Contract contains `exerciseWindowStart` and `exerciseWindowEnd` data points. These define the determined time range for the buyer to exercise options. When the current time is greater than `exerciseWindowEnd`, the buyer won't be able to exercise and the seller will be able to retrieve any remaining collateral. 
+Contract contains `exerciseWindowStart` and `exerciseWindowEnd` data points. These define the determined time range for the buyer to exercise options. When the current time is greater than `exerciseWindowEnd`, the buyer won't be able to exercise and the seller will be able to retrieve any remaining collateral.
 
-For preventing clear arbitrage cases when option seller considers the issuance to be of European options, we would strongly advice the option seller to use `updatePremium` call to considerably increase the premium price when exercise window opens. This will make sure that the bots won't be able to buy any remaining options and immediately exercise them for quick profit. If the option issuance is considered to be American, such adjustment is of course not needed. 
+For preventing clear arbitrage cases when option seller considers the issuance to be of European options, we would strongly advice the option seller to use `updatePremium` call to considerably increase the premium price when exercise window opens. This will make sure that the bots won't be able to buy any remaining options and immediately exercise them for quick profit. If the option issuance is considered to be American, such adjustment is of course not needed.
 
 Once again, we advise writers to frequently check the underlying token price, and take the best decision for them.
 

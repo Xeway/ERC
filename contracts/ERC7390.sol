@@ -143,7 +143,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
         require(_msgSender() == selectedIssuance.seller, "seller");
-        require(selectedIssuance.soldOptions == 0, "soldOptions");
+        require(selectedIssuance.soldAmount == 0, "soldAmount");
     
         if (selectedIssuance.data.side == Side.Call) {
             _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), selectedIssuance.data.amount);
