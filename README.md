@@ -168,7 +168,7 @@ function create(VanillaOptionData calldata optionData) external returns (uint256
 
 Option writer creates new option tokens and defines the option parameters using `create()`. As an argument, option writer needs to fill `VanillaOptionData` data structure instance and pass it to the method. As a part of creating the option tokens, the function transfers the collateral from option seller to the contract.
 
-It is highly preferred that as a part of calling `create()` the option issuance becomes fully collateralized to prevent increased counterparty risk. For creating a call (put) option issuance, writer needs to allow the amount of `amount` (`strike`) tokens of `underlyingToken` (`strikeToken`) to be transferred to the option contract before calling `create()`. 
+It is highly preferred that as a part of calling `create()` the option issuance becomes fully collateralized to prevent increased counterparty risk. For creating a call (put) option issuance, writer needs to allow the amount of `amount` (`strike`) tokens of `underlyingToken` (`strikeToken`) to be transferred to the option contract before calling `create()`.
 
 Note that this standard does not define functionality for option seller to "re-up" the collateral in case the option contract allows under-collateralization. The contract needs to then adjust its API and implementation accordingly.
 
