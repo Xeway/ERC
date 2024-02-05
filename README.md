@@ -94,7 +94,7 @@ Side of the option. Can take the value `Call` or `Put`. `Call` option gives the 
 
 #### `underlyingToken`
 
-**Type: `address` (`IERC20`)**
+**Type: `address` (ERC20 contract)**
 
 Underlying token.
 
@@ -108,7 +108,7 @@ Maximum amount of the underlying tokens that can be exercised.
 
 #### `strikeToken`
 
-**Type: `address` (`IERC20`)**
+**Type: `address` (ERC20 contract)**
 
 Token used as a reference to determine the strike price.
 
@@ -124,7 +124,7 @@ Note that `strike` is set for exercising the total `amount` of options.
 
 #### `premiumToken`
 
-**Type: `address` (`IERC20`)**
+**Type: `address` (ERC20 contract)**
 
 Premium token. 
 
