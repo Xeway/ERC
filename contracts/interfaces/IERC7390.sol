@@ -28,6 +28,12 @@ interface IERC7390 {
         uint256 strikeAmount;
     }
 
+    error Forbidden();
+    error TransferFailed();
+    error TimeForbidden();
+    error AmountForbidden();
+    error InsufficientBalance();
+
     event Created(uint256 indexed id);
     event Bought(uint256 indexed id, uint256 amount, address indexed buyer);
     event Exercised(uint256 indexed id, uint256 amount);

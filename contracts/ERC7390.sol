@@ -14,7 +14,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     constructor() ERC1155("") ReentrancyGuard() {}
 
     function create(VanillaOptionData calldata optionData) public virtual nonReentrant returns (uint256) {
-        require(optionData.exerciseWindowEnd > block.timestamp, "exerciseWindowEnd");
+        if (optionData.exerciseWindowEnd <= block.timestamp) revert TimeForbidden();
 
         OptionIssuance memory newIssuance;
         newIssuance.data = optionData;
@@ -45,9 +45,8 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function buy(uint256 id, uint256 amount) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        require(amount > 0, "buyerOptionCount");
-        require(block.timestamp <= selectedIssuance.data.exerciseWindowEnd, "exceriseWindowEnd");
-        require(selectedIssuance.data.amount - selectedIssuance.soldAmount >= amount, "amount");
+        if (amount <= 0 || amount > selectedIssuance.data.amount - selectedIssuance.soldAmount) revert AmountForbidden();
+        if (block.timestamp > selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
 
         if (selectedIssuance.data.premium > 0) {
             uint256 remainder = (amount * selectedIssuance.data.premium) % selectedIssuance.data.amount;
@@ -59,7 +58,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
                 selectedIssuance.seller,
                 premiumPaid
             );
-            if (!success) revert("Transfer Failed");
+            if (!success) revert TransferFailed();
         }
 
         _issuance[id].soldAmount += amount;
@@ -70,13 +69,12 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function exercise(uint256 id, uint256 amount) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        require(amount > 0, "amount");
-        require(balanceOf(_msgSender(), id) >= amount, "balance");
-        require(
-            block.timestamp >= selectedIssuance.data.exerciseWindowStart &&
-            block.timestamp <= selectedIssuance.data.exerciseWindowEnd,
-            "timestamp"
-        );
+        if (amount <= 0) revert AmountForbidden();
+        if (amount > balanceOf(_msgSender(), id)) revert InsufficientBalance();
+        if (
+            block.timestamp < selectedIssuance.data.exerciseWindowStart ||
+            block.timestamp > selectedIssuance.data.exerciseWindowEnd
+        ) revert TimeForbidden();
 
         IERC20 underlyingToken = IERC20(selectedIssuance.data.underlyingToken);
         IERC20 strikeToken = IERC20(selectedIssuance.data.strikeToken);
@@ -94,7 +92,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
             }
         }
 
-        require(transferredStrikeAmount > 0, "transferredStrikeAmount");
+        if (transferredStrikeAmount <= 0) revert Forbidden();
         if (selectedIssuance.data.side == Side.Call) {
             // Buyer pays seller for the underlying token(s) at strike price
             _transferFrom(strikeToken, _msgSender(), selectedIssuance.seller, transferredStrikeAmount);
@@ -102,7 +100,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
             // Transfer underlying token(s) to buyer
             _transfer(underlyingToken, _msgSender(), amount);
         } else {
-            require(selectedIssuance.transferredStrikeAmount + transferredStrikeAmount <= selectedIssuance.strikeAmount, "Exercise amount exceeds strike amount");
+            if (selectedIssuance.strikeAmount < selectedIssuance.transferredStrikeAmount + transferredStrikeAmount) revert Forbidden();
 
             // Buyer transfers the underlying token(s) to writer
             _transferFrom(underlyingToken, _msgSender(), selectedIssuance.seller, amount);
@@ -122,8 +120,8 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function retrieveExpiredTokens(uint256 id) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        require(_msgSender() == selectedIssuance.seller, "seller");
-        require(block.timestamp > selectedIssuance.data.exerciseWindowEnd, "exerciseWindowEnd");
+        if (_msgSender() != selectedIssuance.seller) revert Forbidden();
+        if (block.timestamp <= selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
 
         if (selectedIssuance.data.amount > selectedIssuance.exercisedOptions) {
             if (selectedIssuance.data.side == Side.Call) {
@@ -142,8 +140,8 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function cancel(uint256 id) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        require(_msgSender() == selectedIssuance.seller, "seller");
-        require(selectedIssuance.soldAmount == 0, "soldAmount");
+        if (_msgSender() != selectedIssuance.seller) revert Forbidden();
+        if (selectedIssuance.soldAmount != 0) revert Forbidden();
     
         if (selectedIssuance.data.side == Side.Call) {
             _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), selectedIssuance.data.amount);
@@ -158,8 +156,8 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function updatePremium(uint256 id, uint256 amount) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        require(_msgSender() == selectedIssuance.seller, "seller");
-        require(block.timestamp <= selectedIssuance.data.exerciseWindowEnd, "exerciseWindowEnd");
+        if (_msgSender() != selectedIssuance.seller) revert Forbidden();
+        if (block.timestamp > selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
 
         _issuance[id].data.premium = amount;
         emit PremiumUpdated(id, amount);
@@ -171,12 +169,12 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
 
     function _transfer(IERC20 token, address to, uint256 amount) internal {
         bool success = token.transfer(to, amount);
-        if (!success) revert("Transfer failed");
+        if (!success) revert TransferFailed();
     }
 
     function _transferFrom(IERC20 token, address from, address to, uint256 amount) internal {
         bool success = token.transferFrom(from, to, amount);
-        if (!success) revert("Transfer failed");
+        if (!success) revert TransferFailed();
     }
 
     function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal override {
