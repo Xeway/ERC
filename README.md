@@ -19,7 +19,7 @@ Vanilla options grant the right, without obligation, to buy or sell an asset at 
 
 This standard doesn't represent a simple option that would be useless after the expiration date. Instead, it can store as many issuance as needed. Each issuance is identified by an id, and can be bought, exercised, cancelled, etc., independently of the other issuances.\
 Every issuance is collateralized, meaning that the seller has to provide the collateral to the contract before the buyer can buy the option. The seller can retrieve the collateral if the buyer hasn't exercised in the exercise window.\
-A buyer can decide to buy only a fraction of the issuance (meaning multiple buyers is possible), and will receive accordingly tokens (ERC-1155) that represent the fraction of the issuance. These tokens can be exchanged between users, and are used for exercising the option. With this mechanism, a buyer can decide to exercise only a fraction of what he bought.\
+A buyer can decide to buy only a fraction of the issuance (meaning multiple buyers is possible), and will receive accordingly tokens (ERC-1155) that represent the fraction of the issuance. From now, we will call these tokens *redeem tokens*. These tokens can be exchanged between users, and are used for exercising the option. With this mechanism, a buyer can decide to exercise only a fraction of what he bought.\
 Also, the seller can decide to cancel the issuance if no option has been bought yet. He also has the right to update the premium price at any time. This doesn't affect the already bought options.\
 The underlying token, strike token and premium token are ERC-20 tokens.
 
@@ -27,9 +27,11 @@ The underlying token, strike token and premium token are ERC-20 tokens.
 
 Options are widely used financial instruments, and have a true usefulness for investors and traders. It offers versatile risk management tools and speculative opportunities.\
 In the decentralized finance, many options-selling platform emerged, but each of these protocols implements their own definition of an option. This leads to incapabilities, which is a pity because options should be interoperable like fungible/non-fungible tokens are.\
-By introducing a standard interface for vanilla options contracts, we aim to foster a more inclusive and interoperable derivatives ecosystem. This standard will enhance the user experience and facilitate the development of decentralized options platforms, enabling users to seamlessly trade options across different applications. Moreover, this standard is designed to represent **vanilla** options, which are the most common type of options. This standard can be used as a base for more complex options, such as exotic options.
+By introducing a standard interface for vanilla options contracts, we aim to foster a more inclusive and interoperable derivatives ecosystem. This standard will enhance the user experience and facilitate the development of decentralized options platforms, enabling users to seamlessly trade options across different applications. Moreover, this standard is designed to represent vanilla options, which are the most common type of options. This standard can be used as a base for more complex options, such as exotic options.
 
 ## Specification
+
+All EIP-7390 MUST implement EIP-1155 to give the possibility to buy only a fraction of the issuance.
 
 ### Interface
 
@@ -58,6 +60,12 @@ interface IERC7390 {
         uint256 exercisedOptions;
         uint256 soldAmount;
     }
+
+    error Forbidden();
+    error TransferFailed();
+    error TimeForbidden();
+    error AmountForbidden();
+    error InsufficientBalance();
 
     event Created(uint256 indexed id);
     event Bought(uint256 indexed id, uint256 amount, address indexed buyer);
@@ -134,7 +142,7 @@ Premium token.
 
 Premium price is the price that option buyer has to pay to option seller to compensate for the risk that the seller takes for issuing the options. Option premium changes depending on various factors, most important ones being the volatility of the underlying token, strike price and the time left for exercising the options.
 
-Note that the premium price is set for exercising the total `amount` of options. The option buyer may be (depending on the contract implementation) able to buy only fraction of the option tokens and the paid premium price must be adjusted by the contract to reflect it.
+**Note that the premium price is set for exercising the total `amount` of options. The option buyer may be (depending on the contract implementation) able to buy only fraction of the option tokens and the paid premium price must be adjusted by the contract to reflect it.**
 
 > Be aware of token decimals!
 
@@ -152,12 +160,6 @@ Option exercising window start time. When current time is greater or equal to `e
 
 Option exercising window end time. When current time is greater or equal to `exerciseWindowStart` and below or equal to `exerciseWindowEnd`, owner of option(s) can exercise them. When current time is greater than `exerciseWindowEnd`, option holder can't exercise and writer can retrieve remaining underlying (call) or strike (put) tokens.
 
-#### `data`
-
-**Type: `bytes`**
-
-Additional data that can be passed to contract function as a part of option issuance to add flexibility. For standard vanilla options this field is zero-sized array.
-
 ### Function Descriptions
 
 #### `create`
@@ -172,8 +174,9 @@ It is highly preferred that as a part of calling `create()` the option issuance 
 
 Note that this standard does not define functionality for option seller to "re-up" the collateral in case the option contract allows under-collateralization. The contract needs to then adjust its API and implementation accordingly.
 
-*Returns an id value that refers to the created option issuance in option contract if option issuance was successful.*
+MUST revert if `exerciseWindowStart` is less than the current time.
 
+*Returns an id value that refers to the created option issuance in option contract if option issuance was successful.*
 *Emits `Created` event if option issuance was successful.*
 
 #### `buy`
@@ -186,6 +189,10 @@ Allows the option buyer to buy `amount` of options from option issuance with the
 
 The buyer has to allow the token contract to transfer the (fraction of total) `premium` in the specified `premiumToken` to option seller. During the call of the function, the premium is be directly transferred to the seller.
 
+MUST revert if `amount` is 0 or greater than the remaining options available for purchase.
+MUST revert if the current time is greater than `exerciseWindowEnd`.
+
+*Mints redeem tokens to the buyer's address if buying was successful.*
 *Emits `Bought` event if buying was successful.*
 
 #### `exercise`
@@ -201,8 +208,10 @@ Allows the buyer to exercise `amount` of option tokens from option issuance with
 
 The buyer has to allow the spend of either `strikeToken` or `underlyingToken` before calling `exercise()`.
 
-Exercise can only take place when `exerciseWindowStart` <= current time <= `exerciseWindowEnd`
+Exercise MUST only take place when `exerciseWindowStart` <= current time <= `exerciseWindowEnd`.\
+MUST revert if `amount` is 0 or buyer hasn't the necessary redeem tokens to exercise the option.
 
+*Burns the exercised tokens from the buyer's address if the exercising was successful.*
 *Emits `Exercised` event if the option exercising was successful.*
 
 #### `retrieveExpiredTokens`
@@ -211,8 +220,13 @@ Exercise can only take place when `exerciseWindowStart` <= current time <= `exer
 function retrieveExpiredTokens(uint256 id) external;
 ```
 
-Allows option seller to retrieve the collateral tokens that were not exercised. Seller can execute this function succesfully only after current time is greater than `exerciseWindowEnd`.
+Allows option seller to retrieve the collateral tokens that were not exercised. If the option is a call, seller retrieves the underlying tokens. If the option is a put, seller retrieves the strike tokens.
 
+MUST revert if the address calling the function is not the seller of the option issuance.\
+MUST revert if `exerciseWindowEnd` is greater or equals than the current time.
+
+*Transfers the un-exercised collateral to the seller's address.*
+*Deletes the option issuance from the contract if the retrieval was successful.*
 *Emits `Expired` event if the retrieval was successful.*
 
 #### `cancel`
@@ -221,8 +235,13 @@ Allows option seller to retrieve the collateral tokens that were not exercised. 
 function cancel(uint256 id) external;
 ```
 
-Allows the seller to cancel the option and retrieve tokens used as collateral. Seller can only execute this function if not a single option has been purchased. If even a single option token is bought then this function will revert.
+Allows the seller to cancel the option and retrieve tokens used as collateral. If the option is a call, seller retrieves the underlying tokens. If the option is a put, seller retrieves the strike tokens.
 
+MUST revert if the address calling the function is not the seller of the option issuance.\
+MUST revert if at least one option's fraction has been bought.
+
+*Transfers the un-exercised collateral to the seller's address.*
+*Deletes the option issuance from the contract if the cancelation was successful.*
 *Emits `Canceled` event if the cancelation was successful.*
 
 #### `updatePremium`
@@ -231,7 +250,12 @@ Allows the seller to cancel the option and retrieve tokens used as collateral. S
 function updatePremium(uint256 id, uint256 amount) external;
 ```
 
-Allows the seller to update the premium that option buyer will need to provide for buying the options. Note that the `amount` will be for the whole underlying amount, not only for the options that might still be available for purchase.
+Allows the seller to update the premium that option buyer will need to provide for buying the options.
+
+**Note that the `amount` will be for the whole underlying amount, not only for the options that might still be available for purchase.**
+
+MUST revert if the address calling the function is not the seller of the option issuance.\
+MUST revert if the current time is greater than `exerciseWindowEnd`.
 
 *Emits `PremiumUpdated` event when the function call was handled successfully.*
 
@@ -292,6 +316,28 @@ event PremiumUpdated(uint256 indexed id, uint256 amount);
 ```
 
 Emitted when seller updates the premium to `amount` for option issuance with given `id`. Note that the updated premium is for the total issuance.
+
+### Errors
+
+#### `Forbidden`
+
+Reverts when the caller is not allowed to perform some actions (general purpose).
+
+#### `TransferFailed`
+
+Reverts when the transfer of tokens failed.
+
+#### `TimeForbidden`
+
+Reverts when the current time of the execution is invalid.
+
+#### `AmountForbidden`
+
+Reverts when the amount is invalid.
+
+#### `InsufficientBalance`
+
+Reverts when the caller has insufficient balance to perform the action.
 
 ### Concrete Examples
 
@@ -355,7 +401,12 @@ This contract's concept is oracle-free, because we assume that a rational buyer 
 
 The premium is to be determined by the option seller. Seller is free to choose how to calculate the premium, e.g. by using *Black-Scholes model* or something else. Seller can update the premium price at will in order to adjust it according to changes on the underlying's price, volatility, time to option expiry and other such factors. Computing the premium off-chain is better for gas costs purposes.
 
-This ERC is intended to represent **vanilla** options. However, exotic options can be built on top of this ERC.
+This ERC is intended to represent vanilla options. However, exotic options can be built on top of this ERC.\
+Instead of representing a single option that would be useless after the expiration date, this contract can store as many issuances as needed. Each issuance is identified by an id, and can be bought, exercised, cancelled, etc., independently of the other issuances. This is a better approach for gas costs purposes.
+
+It's designed so that the option can be either European or American, by introduction of the `exerciseWindowStart` and `exerciseWindowEnd` data points. If the option seller considers the option to be European, he can set the `exerciseWindowStart` and `exerciseWindowEnd` to the same value, and the buyer won't be able to exercise the option before the `exerciseWindowStart`. If the option seller considers the option to be American, he can set the `exerciseWindowStart` to the current time, and the buyer will be able to exercise the option immediately.
+
+The contract inherently supports multiple buyers for a single option issuance. This is achieved by using ERC-1155 tokens for representing the options. When a buyer buys a fraction of the option issuance, he receives ERC-1155 tokens that represent the fraction of the option issuance. These tokens can be exchanged between users, and are used for exercising the option. With this mechanism, a buyer can decide to exercise only a fraction of what he bought.
 
 ## Security Considerations
 
