@@ -17,6 +17,7 @@ interface IERC7390 {
         uint256 premium;
         uint256 exerciseWindowStart;
         uint256 exerciseWindowEnd;
+        address[] allowed;
     }
 
     struct OptionIssuance {
@@ -40,6 +41,7 @@ interface IERC7390 {
     event Expired(uint256 indexed id);
     event Canceled(uint256 indexed id);
     event PremiumUpdated(uint256 indexed id, uint256 amount);
+    event AllowedUpdated(uint256 indexed id, address[] allowed);
 
     function create(VanillaOptionData calldata optionData) external returns (uint256);
 
@@ -52,6 +54,8 @@ interface IERC7390 {
     function cancel(uint256 id) external;
 
     function updatePremium(uint256 id, uint256 amount) external;
+
+    function updateAllowed(uint256 id, address[] memory allowed) external;
 
     function issuance(uint256 id) external view returns (OptionIssuance memory);
 }

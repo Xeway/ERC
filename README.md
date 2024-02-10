@@ -52,6 +52,7 @@ interface IERC7390 {
         uint256 premium;
         uint256 exerciseWindowStart;
         uint256 exerciseWindowEnd;
+        address[] allowed;
     }
 
     struct OptionIssuance {
@@ -73,6 +74,7 @@ interface IERC7390 {
     event Expired(uint256 indexed id);
     event Canceled(uint256 indexed id);
     event PremiumUpdated(uint256 indexed id, uint256 amount);
+    event AllowedUpdated(uint256 indexed id, address[] allowed);
 
     function create(VanillaOptionData calldata optionData) external returns (uint256);
 
@@ -85,6 +87,8 @@ interface IERC7390 {
     function cancel(uint256 id) external;
 
     function updatePremium(uint256 id, uint256 amount) external;
+
+    function updateAllowed(uint256 id, address[] memory allowed) external;
 
     function issuance(uint256 id) external view returns (OptionIssuance memory);
 }
@@ -124,9 +128,9 @@ Token used as a reference to determine the strike price.
 
 **Type: `uint256`**
 
-Strike price. The option buyer may be (depending on the contract implementation) able to exercise only fraction of the options and the paid strike price must be adjusted by the contract to reflect it.
+Strike price. The option buyer MAY be able to exercise only fraction of the issuance and the paid strike price must be adjusted by the contract to reflect it.
 
-Note that `strike` is set for exercising the total `amount` of options.
+Note that `strike` is set for exercising the total `amount` of the issuance.
 
 > Be aware of token decimals!
 
@@ -140,9 +144,9 @@ Premium token.
 
 **Type: `uint256`**
 
-Premium price is the price that option buyer has to pay to option seller to compensate for the risk that the seller takes for issuing the options. Option premium changes depending on various factors, most important ones being the volatility of the underlying token, strike price and the time left for exercising the options.
+Premium price is the price that option buyer has to pay to option seller to compensate for the risk that the seller takes for issuing the option. Option premium changes depending on various factors, most important ones being the volatility of the underlying token, strike price and the time left for exercising the options.
 
-**Note that the premium price is set for exercising the total `amount` of options. The option buyer may be (depending on the contract implementation) able to buy only fraction of the option tokens and the paid premium price must be adjusted by the contract to reflect it.**
+**Note that the premium price is set for exercising the total `amount` of options. The buyer MAY be able to buy only fraction of the option tokens and the paid premium price must be adjusted by the contract to reflect it.**
 
 > Be aware of token decimals!
 
@@ -159,6 +163,12 @@ Option exercising window start time. When current time is greater or equal to `e
 **Format: *timestamp as seconds since unix epoch***
 
 Option exercising window end time. When current time is greater or equal to `exerciseWindowStart` and below or equal to `exerciseWindowEnd`, owner of option(s) can exercise them. When current time is greater than `exerciseWindowEnd`, option holder can't exercise and writer can retrieve remaining underlying (call) or strike (put) tokens.
+
+#### `allowed`
+
+**Type: `address[]`**
+
+Addresses that are allowed to buy the issuance. If the array is empty, all addresses are allowed to buy the issuance.
 
 ### Function Descriptions
 
@@ -189,6 +199,7 @@ Allows the option buyer to buy `amount` of options from option issuance with the
 
 The buyer has to allow the token contract to transfer the (fraction of total) `premium` in the specified `premiumToken` to option seller. During the call of the function, the premium is be directly transferred to the seller.
 
+If `allowed` array is not empty, the buyer's address MUST be included in this list.
 MUST revert if `amount` is 0 or greater than the remaining options available for purchase.
 MUST revert if the current time is greater than `exerciseWindowEnd`.
 
@@ -259,6 +270,20 @@ MUST revert if the current time is greater than `exerciseWindowEnd`.
 
 *Emits `PremiumUpdated` event when the function call was handled successfully.*
 
+#### `updateAllowed`
+
+```solidity
+function updateAllowed(uint256 id, address[] memory allowed) external;
+```
+
+Allows the seller to update the list of allowed addresses that can buy the option issuance.\
+If a buyer already bought an option and his address is not in the new list, he will still be able to exercise his purchased options.
+
+MUST revert if the address calling the function is not the seller of the option issuance.
+MUST revert if the current time is greater than `exerciseWindowEnd`.
+
+*Emits `AllowedUpdated` event when the function call was handled successfully.*
+
 #### `issuance`
 
 ```solidity
@@ -316,6 +341,14 @@ event PremiumUpdated(uint256 indexed id, uint256 amount);
 ```
 
 Emitted when seller updates the premium to `amount` for option issuance with given `id`. Note that the updated premium is for the total issuance.
+
+#### `AllowedUpdated`
+
+```solidity
+event AllowedUpdated(uint256 indexed id, address[] allowed);
+```
+
+Emitted when seller updates the list of allowed addresses for option issuance with given `id`.
 
 ### Errors
 
@@ -408,6 +441,8 @@ It's designed so that the option can be either European or American, by introduc
 
 The contract inherently supports multiple buyers for a single option issuance. This is achieved by using ERC-1155 tokens for representing the options. When a buyer buys a fraction of the option issuance, he receives ERC-1155 tokens that represent the fraction of the option issuance. These tokens can be exchanged between users, and are used for exercising the option. With this mechanism, a buyer can decide to exercise only a fraction of what he bought.
 
+The contract implements `allowed` array, which can be used to restrict the addresses that can buy the option issuance. This can be useful if two users agreed for an option off-chain and they want to create it on-chain. This prevents the risk that between the creation of the contract and the purchase by the second user, an on-chain user has already bought the contract.
+
 ## Security Considerations
 
 Contract contains `exerciseWindowStart` and `exerciseWindowEnd` data points. These define the determined time range for the buyer to exercise options. When the current time is greater than `exerciseWindowEnd`, the buyer won't be able to exercise and the seller will be able to retrieve any remaining collateral.
@@ -415,8 +450,6 @@ Contract contains `exerciseWindowStart` and `exerciseWindowEnd` data points. The
 For preventing clear arbitrage cases when option seller considers the issuance to be of European options, we would strongly advice the option seller to use `updatePremium` call to considerably increase the premium price when exercise window opens. This will make sure that the bots won't be able to buy any remaining options and immediately exercise them for quick profit. If the option issuance is considered to be American, such adjustment is of course not needed.
 
 Once again, we advise writers to frequently check the underlying token price, and take the best decision for them.
-
-**Improvement idea:** if two users agreed for an option off-chain and they want to create it on-chain, there is a risk that between the creation of the contract and the purchase by the second user, an on-chain user has already bought the contract. An implementation of this proposal's interface might want to add the allowed addresses e.g. to `data` variable or via a separate function call to define the allowed addresses that can buy options.
 
 ## Copyright
 

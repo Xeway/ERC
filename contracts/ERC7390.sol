@@ -45,6 +45,16 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function buy(uint256 id, uint256 amount) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
+        if (selectedIssuance.data.allowed.length > 0) {
+            bool allowed = false;
+            for (uint256 i = 0; i < selectedIssuance.data.allowed.length; i++) {
+                if (selectedIssuance.data.allowed[i] == _msgSender()) {
+                    allowed = true;
+                    break;
+                }
+            }
+            if (!allowed) revert Forbidden();
+        }
         if (amount <= 0 || amount > selectedIssuance.data.amount - selectedIssuance.soldAmount) revert AmountForbidden();
         if (block.timestamp > selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
 
@@ -161,6 +171,16 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
 
         _issuance[id].data.premium = amount;
         emit PremiumUpdated(id, amount);
+    }
+
+    function updateAllowed(uint256 id, address[] memory allowed) public virtual nonReentrant {
+        OptionIssuance memory selectedIssuance = _issuance[id];
+
+        if (_msgSender() != selectedIssuance.seller) revert Forbidden();
+        if (block.timestamp > selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
+
+        _issuance[id].data.allowed = allowed;
+        emit AllowedUpdated(id, allowed);
     }
 
     function issuance(uint256 id) public view virtual returns (OptionIssuance memory) {
