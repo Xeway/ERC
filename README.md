@@ -449,6 +449,8 @@ Contract contains `exerciseWindowStart` and `exerciseWindowEnd` data points. The
 
 For preventing clear arbitrage cases when option seller considers the issuance to be of European options, we would strongly advice the option seller to use `updatePremium` call to considerably increase the premium price when exercise window opens. This will make sure that the bots won't be able to buy any remaining options and immediately exercise them for quick profit. If the option issuance is considered to be American, such adjustment is of course not needed.
 
+This standard implements the `updatePremium` function, which allows the seller to update the premium price at any time. This function can lead to security issues for the buyer: a buyer could buy an option, and the seller could front-run buyer's transaction by updating the premium price to a very high value. To prevent this, we advise the buyer to only allow for the agreed amount of premium to be spent by the contract, not more.
+
 Once again, we advise writers to frequently check the underlying token price, and take the best decision for them.
 
 ## Copyright
