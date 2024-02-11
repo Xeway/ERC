@@ -178,24 +178,24 @@ describe("Exercising", function () {
     const boughtOptions = OPTION_COUNT / 10;
     const premiumPaidModulo = (boughtOptions * PREMIUM) % OPTION_COUNT;
     const premiumPaid = Math.floor((boughtOptions * PREMIUM) / OPTION_COUNT) + (premiumPaidModulo > 0 ? 1 : 0);
-    const exercisedOptions = 5;
-    const totalStrikePriceModulo = (exercisedOptions * putOption.strike) % OPTION_COUNT;
+    const exercisedAmount = 5;
+    const totalStrikePriceModulo = (exercisedAmount * putOption.strike) % OPTION_COUNT;
     const totalStrikePrice =
-      Math.floor((exercisedOptions * putOption.strike) / OPTION_COUNT) + (totalStrikePriceModulo > 0 ? 1 : 0);
+      Math.floor((exercisedAmount * putOption.strike) / OPTION_COUNT) + (totalStrikePriceModulo > 0 ? 1 : 0);
     await token1.connect(acct2).approve(optionContract.target, boughtOptions);
     await token2.connect(acct2).approve(optionContract.target, premiumPaid);
     await expect(optionContract.connect(acct2).buy(0, boughtOptions)).to.emit(optionContract, "Bought");
-    await expect(optionContract.connect(acct2).exercise(0, exercisedOptions)).to.emit(optionContract, "Exercised");
+    await expect(optionContract.connect(acct2).exercise(0, exercisedAmount)).to.emit(optionContract, "Exercised");
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(0);
-    expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE + exercisedOptions);
-    expect(await token1.balanceOf(acct2.address)).to.equal(TOKEN1_START_BALANCE - exercisedOptions);
+    expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE + exercisedAmount);
+    expect(await token1.balanceOf(acct2.address)).to.equal(TOKEN1_START_BALANCE - exercisedAmount);
 
     expect(await token2.balanceOf(optionContract.target)).to.equal(totalUnderlyingPrice - totalStrikePrice);
     expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE + premiumPaid - totalUnderlyingPrice);
     expect(await token2.balanceOf(acct2.address)).to.equal(TOKEN2_START_BALANCE - premiumPaid + totalStrikePrice);
 
-    expect(await optionContract.balanceOf(acct2.address, 0)).to.equal(boughtOptions - exercisedOptions);
+    expect(await optionContract.balanceOf(acct2.address, 0)).to.equal(boughtOptions - exercisedAmount);
   });
 
   it("Should cancel put exercising because of the rounding error", async function () {

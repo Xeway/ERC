@@ -23,7 +23,7 @@ interface IERC7390 {
     struct OptionIssuance {
         VanillaOptionData data;
         address seller;
-        uint256 exercisedOptions;
+        uint256 exercisedAmount;
         uint256 soldAmount;
         uint256 transferredStrikeAmount;
         uint256 strikeAmount;

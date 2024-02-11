@@ -58,7 +58,7 @@ interface IERC7390 {
     struct OptionIssuance {
         VanillaOptionData data;
         address seller;
-        uint256 exercisedOptions;
+        uint256 exercisedAmount;
         uint256 soldAmount;
     }
 
@@ -169,6 +169,38 @@ Option exercising window end time. When current time is greater or equal to `exe
 **Type: `address[]`**
 
 Addresses that are allowed to buy the issuance. If the array is empty, all addresses are allowed to buy the issuance.
+
+`VanillaOptionData` is stored in the `OptionIssuance` struct, which is used to store the option issuance data. It contains other information.
+
+#### `seller`
+
+**Type: `address`**
+
+Address of the seller meaning the address that created the option.
+
+#### `exercisedAmount`
+
+**Type: `uint256`**
+
+Amount of underlying tokens that have been exercised.
+
+#### `soldAmount`
+
+**Type: `uint256`**
+
+Amount of underlying tokens that have been bought for this issuance.
+
+#### `transferredStrikeAmount`
+
+**Type: `uint256`**
+
+Amount of strike tokens that have been transferred to the seller (call) or buyers (put) of the option issuance. This is an utility variable used to not always have to calculate the strike amount. It's updated at the same time `exercisedAmount` is updated. The calculation is `(amount * selectedIssuance.data.strike) / selectedIssuance.data.amount`.
+
+#### `strikeAmount`
+
+**Type: `uint256`**
+
+Amount of strike tokens that have been transferred to the contract. This is an utility variable used to not always have to calculate the strike amount. We compute it at the creation of the option. The calculation is `(optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals())`.
 
 ### Function Descriptions
 
