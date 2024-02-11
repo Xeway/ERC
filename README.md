@@ -144,9 +144,9 @@ Premium token.
 
 **Type: `uint256`**
 
-Premium price is the price that option buyer has to pay to option seller to compensate for the risk that the seller takes for issuing the option. Option premium changes depending on various factors, most important ones being the volatility of the underlying token, strike price and the time left for exercising the options.
+Premium price is the price that option buyer has to pay to option seller to compensate for the risk that the seller takes for issuing the option. Option premium changes depending on various factors, most important ones being the volatility of the underlying token, strike price and the time left for exercising the option.
 
-**Note that the premium price is set for exercising the total `amount` of options. The buyer MAY be able to buy only fraction of the option tokens and the paid premium price must be adjusted by the contract to reflect it.**
+**Note that the premium price is set for exercising the total `amount` of the issuance. The buyer MAY be able to buy only fraction of the option tokens and the paid premium price must be adjusted by the contract to reflect it.**
 
 > Be aware of token decimals!
 
@@ -234,7 +234,7 @@ MUST revert if `exerciseWindowStart` is less than the current time or if `exerci
 function buy(uint256 id, uint256 amount) external;
 ```
 
-Allows the option buyer to buy `amount` of options from option issuance with the defined `id`.
+Allows the buyer to buy `amount` of option tokens from option issuance with the defined `id`.
 
 The buyer has to allow the token contract to transfer the (fraction of total) `premium` in the specified `premiumToken` to option seller. During the call of the function, the premium is be directly transferred to the seller.
 
@@ -242,7 +242,7 @@ If `allowed` array is not empty, the buyer's address MUST be included in this li
 MUST revert if `amount` is 0 or greater than the remaining options available for purchase.\
 MUST revert if the current time is greater than `exerciseWindowEnd`.
 
-*Mints redeem tokens to the buyer's address if buying was successful.*
+*Mints `amount` redeem tokens to the buyer's address if buying was successful.*
 *Emits `Bought` event if buying was successful.*
 
 #### `exercise`
@@ -261,7 +261,7 @@ The buyer has to allow the spend of either `strikeToken` or `underlyingToken` be
 Exercise MUST only take place when `exerciseWindowStart` <= current time <= `exerciseWindowEnd`.\
 MUST revert if `amount` is 0 or buyer hasn't the necessary redeem tokens to exercise the option.
 
-*Burns the exercised tokens from the buyer's address if the exercising was successful.*
+*Burns `amount` redeem tokens from the buyer's address if the exercising was successful.*
 *Emits `Exercised` event if the option exercising was successful.*
 
 #### `retrieveExpiredTokens`
@@ -300,7 +300,7 @@ MUST revert if at least one option's fraction has been bought.
 function updatePremium(uint256 id, uint256 amount) external;
 ```
 
-Allows the seller to update the premium that option buyer will need to provide for buying the options.
+Allows the seller to update the premium that buyers will need to provide for buying the options.
 
 **Note that the `amount` will be for the whole underlying amount, not only for the options that might still be available for purchase.**
 
@@ -431,11 +431,11 @@ To create the contract, he will give the following parameters:
 - `exerciseWindowStart`: **1689292800** *(2023-07-14 timestamp)*
 - `exerciseWindowEnd`: **1689465600** *(2023-07-16 timestamp)*
 
-Once the contract created, Bob has to transfer the collateral to the contract. This collateral corresponds to the tokens he will have to give Alice if she decides to exercise the option. For this option, he has to give as collateral 8 TokenA. He does that by calling the function `approve(address spender, uint256 amount)` on the TokenA's contract and as parameters the contract's address (`spender`) and for `amount`: **8 \* 10^(TokenA's decimals)**. Then Bob can execute `create` on the contract for issuing the options.
+Once the contract created, Bob has to transfer the collateral to the contract. This collateral corresponds to the tokens he will have to give Alice if she decides to exercise the option. For this option, he has to give as collateral 8 TokenA. He does that by calling the function `approve(address spender, uint256 amount)` on the TokenA's contract and as parameters the contract's address (`spender`) and for `amount`: **8 \* 10^(TokenA's decimals)**. Then Bob can execute `create` on the contract for issuing the option.
 
 Alice for its part, has to allow the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **10 \* 10^(TokenC's decimals)**. She can then execute `buy` on the contract in order to buy the option.
 
-We're on the 15th of July and Alice wants to exercise her options because 1 TokenA is traded at 50 TokenB! She needs to allow the contract to transfer **8 \* 25 \* 10^(TokenB's decimals)** TokenBs from her account to match the required strike funding. When she calls `exercise` on the contract, the contract will transfer the strike funding to Bob and the TokenA tokens that Bob gave as collateral during `create` call to Alice.
+We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at 50 TokenB! She needs to allow the contract to transfer **8 \* 25 \* 10^(TokenB's decimals)** TokenBs from her account to match the required strike funding. When she calls `exercise` on the contract, the contract will transfer the strike funding to Bob and the TokenA tokens that Bob gave as collateral during `create` call to Alice.
 
 If she decides to sell the TokenA tokens, she'd make a profit of 8\*50 - 8\*25 = 200 TokenB!
 
