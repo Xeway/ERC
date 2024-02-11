@@ -443,6 +443,8 @@ The contract inherently supports multiple buyers for a single option issuance. T
 
 The contract implements `allowed` array, which can be used to restrict the addresses that can buy the option issuance. This can be useful if two users agreed for an option off-chain and they want to create it on-chain. This prevents the risk that between the creation of the contract and the purchase by the second user, an on-chain user has already bought the contract.
 
+This ERC is designed to handle ERC-20 tokens. However, this standard can be used as a good base for handling other types of tokens, such as ERC-721 tokens. Some attributes and functions signatures (to provide an id instead of an amount for instance) would have to be changed, but the general idea would remain the same.
+
 ## Security Considerations
 
 Contract contains `exerciseWindowStart` and `exerciseWindowEnd` data points. These define the determined time range for the buyer to exercise options. When the current time is greater than `exerciseWindowEnd`, the buyer won't be able to exercise and the seller will be able to retrieve any remaining collateral.
