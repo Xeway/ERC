@@ -162,7 +162,7 @@ Option exercising window start time. When current time is greater or equal to `e
 **Type: `uint256`**\
 **Format: *timestamp as seconds since unix epoch***
 
-Option exercising window end time. When current time is greater or equal to `exerciseWindowStart` and below or equal to `exerciseWindowEnd`, owner of option(s) can exercise them. When current time is greater than `exerciseWindowEnd`, option holder can't exercise and writer can retrieve remaining underlying (call) or strike (put) tokens.
+Option exercising window end time. When current time is greater or equal to `exerciseWindowStart` and below or equal to `exerciseWindowEnd`, owner of option(s) can exercise them. When current time is greater than `exerciseWindowEnd`, buyers can't exercise and writer can retrieve remaining underlying (call) or strike (put) tokens.
 
 #### `allowed`
 
@@ -171,6 +171,10 @@ Option exercising window end time. When current time is greater or equal to `exe
 Addresses that are allowed to buy the issuance. If the array is empty, all addresses are allowed to buy the issuance.
 
 ### Function Descriptions
+
+#### `constructor`
+
+No constructor is needed for this standard, but the contract MUST implement the ERC-1155 interface. So, the contract MUST call the ERC-1155 constructor.
 
 #### `create`
 
@@ -184,7 +188,10 @@ It is highly preferred that as a part of calling `create()` the option issuance 
 
 Note that this standard does not define functionality for option seller to "re-up" the collateral in case the option contract allows under-collateralization. The contract needs to then adjust its API and implementation accordingly.
 
-MUST revert if `exerciseWindowStart` is less than the current time.
+MUST revert if `underlyingToken` or `strikeToken` is the zero address.\
+MUST revert if `premium` is not 0 and `premiumToken` is the zero address.\
+MUST revert if `amount` or `strike` is 0.\
+MUST revert if `exerciseWindowStart` is less than the current time or if `exerciseWindowEnd` is less than `exerciseWindowStart`.
 
 *Returns an id value that refers to the created option issuance in option contract if option issuance was successful.*
 *Emits `Created` event if option issuance was successful.*
@@ -199,8 +206,8 @@ Allows the option buyer to buy `amount` of options from option issuance with the
 
 The buyer has to allow the token contract to transfer the (fraction of total) `premium` in the specified `premiumToken` to option seller. During the call of the function, the premium is be directly transferred to the seller.
 
-If `allowed` array is not empty, the buyer's address MUST be included in this list.
-MUST revert if `amount` is 0 or greater than the remaining options available for purchase.
+If `allowed` array is not empty, the buyer's address MUST be included in this list.\
+MUST revert if `amount` is 0 or greater than the remaining options available for purchase.\
 MUST revert if the current time is greater than `exerciseWindowEnd`.
 
 *Mints redeem tokens to the buyer's address if buying was successful.*
@@ -279,7 +286,7 @@ function updateAllowed(uint256 id, address[] memory allowed) external;
 Allows the seller to update the list of allowed addresses that can buy the option issuance.\
 If a buyer already bought an option and his address is not in the new list, he will still be able to exercise his purchased options.
 
-MUST revert if the address calling the function is not the seller of the option issuance.
+MUST revert if the address calling the function is not the seller of the option issuance.\
 MUST revert if the current time is greater than `exerciseWindowEnd`.
 
 *Emits `AllowedUpdated` event when the function call was handled successfully.*
@@ -437,7 +444,9 @@ The premium is to be determined by the option seller. Seller is free to choose h
 This ERC is intended to represent vanilla options. However, exotic options can be built on top of this ERC.\
 Instead of representing a single option that would be useless after the expiration date, this contract can store as many issuances as needed. Each issuance is identified by an id, and can be bought, exercised, cancelled, etc., independently of the other issuances. This is a better approach for gas costs purposes.
 
-It's designed so that the option can be either European or American, by introduction of the `exerciseWindowStart` and `exerciseWindowEnd` data points. If the option seller considers the option to be European, he can set the `exerciseWindowStart` and `exerciseWindowEnd` to the same value, and the buyer won't be able to exercise the option before the `exerciseWindowStart`. If the option seller considers the option to be American, he can set the `exerciseWindowStart` to the current time, and the buyer will be able to exercise the option immediately.
+It's designed so that the option can be either European or American, by introduction of the `exerciseWindowStart` and `exerciseWindowEnd` data points. A buyer can only exercise between `exerciseWindowStart` and `exerciseWindowEnd`.\
+If the option seller considers the option to be European, he can set the `exerciseWindowStart` in line with the expiration date, and `exerciseWindowEnd` to the expiration date + a determined time range so that buyers have a period of time to exercise.\
+If the option seller considers the option to be American, he can set the `exerciseWindowStart` to the current time, and the buyer will be able to exercise the option immediately.
 
 The contract inherently supports multiple buyers for a single option issuance. This is achieved by using ERC-1155 tokens for representing the options. When a buyer buys a fraction of the option issuance, he receives ERC-1155 tokens that represent the fraction of the option issuance. These tokens can be exchanged between users, and are used for exercising the option. With this mechanism, a buyer can decide to exercise only a fraction of what he bought.
 

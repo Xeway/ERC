@@ -14,7 +14,10 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     constructor() ERC1155("") ReentrancyGuard() {}
 
     function create(VanillaOptionData calldata optionData) public virtual nonReentrant returns (uint256) {
-        if (optionData.exerciseWindowEnd <= block.timestamp) revert TimeForbidden();
+        if (optionData.underlyingToken == address(0) || optionData.strikeToken == address(0)) revert Forbidden();
+        if (optionData.premium > 0 && optionData.premiumToken == address(0)) revert Forbidden();
+        if (optionData.amount == 0 || optionData.strike == 0) revert AmountForbidden();
+        if (optionData.exerciseWindowEnd < block.timestamp || optionData.exerciseWindowStart > optionData.exerciseWindowEnd) revert TimeForbidden();
 
         OptionIssuance memory newIssuance;
         newIssuance.data = optionData;
@@ -55,13 +58,11 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
             }
             if (!allowed) revert Forbidden();
         }
-        if (amount <= 0 || amount > selectedIssuance.data.amount - selectedIssuance.soldAmount) revert AmountForbidden();
+        if (amount == 0 || amount > selectedIssuance.data.amount - selectedIssuance.soldAmount) revert AmountForbidden();
         if (block.timestamp > selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
 
         if (selectedIssuance.data.premium > 0) {
-            uint256 remainder = (amount * selectedIssuance.data.premium) % selectedIssuance.data.amount;
             uint256 premiumPaid = (amount * selectedIssuance.data.premium) / selectedIssuance.data.amount;
-            if (remainder > 0) premiumPaid++;
 
             bool success = IERC20(selectedIssuance.data.premiumToken).transferFrom(
                 _msgSender(),
@@ -79,7 +80,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function exercise(uint256 id, uint256 amount) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        if (amount <= 0) revert AmountForbidden();
+        if (amount == 0) revert AmountForbidden();
         if (amount > balanceOf(_msgSender(), id)) revert InsufficientBalance();
         if (
             block.timestamp < selectedIssuance.data.exerciseWindowStart ||
@@ -89,20 +90,9 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         IERC20 underlyingToken = IERC20(selectedIssuance.data.underlyingToken);
         IERC20 strikeToken = IERC20(selectedIssuance.data.strikeToken);
 
-        uint256 remainder = (amount * selectedIssuance.data.strike) % selectedIssuance.data.amount;
         uint256 transferredStrikeAmount = (amount * selectedIssuance.data.strike) / selectedIssuance.data.amount;
+        if (transferredStrikeAmount == 0) revert Forbidden();
 
-        if (remainder > 0) {
-            if (selectedIssuance.data.side == Side.Call) {
-                transferredStrikeAmount++;
-            } else {
-                if (transferredStrikeAmount > 0) {
-                    transferredStrikeAmount--;
-                }
-            }
-        }
-
-        if (transferredStrikeAmount <= 0) revert Forbidden();
         if (selectedIssuance.data.side == Side.Call) {
             // Buyer pays seller for the underlying token(s) at strike price
             _transferFrom(strikeToken, _msgSender(), selectedIssuance.seller, transferredStrikeAmount);
