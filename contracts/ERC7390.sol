@@ -24,7 +24,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         newIssuance.writer = _msgSender();
 
         IERC20 underlyingToken = IERC20(optionData.underlyingToken);
-        newIssuance.strikeAmount = (optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals());
+        newIssuance.exerciseCost = (optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals());
         if (optionData.side == Side.Call) {
             _transferFrom(underlyingToken, _msgSender(), address(this), optionData.amount);
         } else {
@@ -32,7 +32,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
                 IERC20(optionData.strikeToken),
                 _msgSender(),
                 address(this),
-                newIssuance.strikeAmount
+                newIssuance.exerciseCost
             );
         }
 
@@ -90,29 +90,29 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         IERC20 underlyingToken = IERC20(selectedIssuance.data.underlyingToken);
         IERC20 strikeToken = IERC20(selectedIssuance.data.strikeToken);
 
-        uint256 transferredStrikeAmount = (amount * selectedIssuance.data.strike) / selectedIssuance.data.amount;
-        if (transferredStrikeAmount == 0) revert Forbidden();
+        uint256 transferredExerciseCost = (amount * selectedIssuance.data.strike) / selectedIssuance.data.amount;
+        if (transferredExerciseCost == 0) revert Forbidden();
 
         if (selectedIssuance.data.side == Side.Call) {
             // Buyer pays writer for the underlying token(s) at strike price
-            _transferFrom(strikeToken, _msgSender(), selectedIssuance.writer, transferredStrikeAmount);
+            _transferFrom(strikeToken, _msgSender(), selectedIssuance.writer, transferredExerciseCost);
 
             // Transfer underlying token(s) to buyer
             _transfer(underlyingToken, _msgSender(), amount);
         } else {
-            if (selectedIssuance.strikeAmount < selectedIssuance.transferredStrikeAmount + transferredStrikeAmount) revert Forbidden();
+            if (selectedIssuance.exerciseCost < selectedIssuance.transferredExerciseCost + transferredExerciseCost) revert Forbidden();
 
             // Buyer transfers the underlying token(s) to writer
             _transferFrom(underlyingToken, _msgSender(), selectedIssuance.writer, amount);
 
             // Pay buyer the strike price
-            _transfer(strikeToken, _msgSender(), transferredStrikeAmount);
+            _transfer(strikeToken, _msgSender(), transferredExerciseCost);
         }
 
         // Burn used option tokens
         _burn(_msgSender(), id, amount);
         _issuance[id].exercisedAmount += amount;
-        _issuance[id].transferredStrikeAmount += transferredStrikeAmount;
+        _issuance[id].transferredExerciseCost += transferredExerciseCost;
 
         emit Exercised(id, amount);
     }
@@ -128,7 +128,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
                 uint256 underlyingTokenGiveback = selectedIssuance.data.amount - selectedIssuance.exercisedAmount;
                 _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), underlyingTokenGiveback);
             } else {
-                uint256 strikeTokenGiveback = selectedIssuance.strikeAmount - selectedIssuance.transferredStrikeAmount;
+                uint256 strikeTokenGiveback = selectedIssuance.exerciseCost - selectedIssuance.transferredExerciseCost;
                 _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), strikeTokenGiveback);
             }                        
         }
@@ -146,7 +146,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         if (selectedIssuance.data.side == Side.Call) {
             _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), selectedIssuance.data.amount);
         } else {
-            _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), selectedIssuance.strikeAmount);          
+            _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), selectedIssuance.exerciseCost);          
         }
 
         delete _issuance[id];

@@ -25,8 +25,8 @@ interface IERC7390 {
         address writer;
         uint256 exercisedAmount;
         uint256 soldAmount;
-        uint256 transferredStrikeAmount;
-        uint256 strikeAmount;
+        uint256 transferredExerciseCost;
+        uint256 exerciseCost;
     }
 
     error Forbidden();

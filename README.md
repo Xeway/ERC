@@ -192,17 +192,17 @@ Amount of underlying tokens that have been exercised.
 
 Amount of underlying tokens that have been bought for this issuance.
 
-#### `transferredStrikeAmount`
+#### `transferredExerciseCost`
 
 **Type: `uint256`**
 
-Amount of strike tokens that have been transferred to the writer (call) or buyers (put) of the option issuance. This is an utility variable used to not always have to calculate the strike amount. It's updated at the same time `exercisedAmount` is updated. The calculation is `(amount * selectedIssuance.data.strike) / selectedIssuance.data.amount`.
+Amount of strike tokens that have been transferred to the writer (call) or buyers (put) of the option issuance. This is an utility variable used to not always have to calculate the total exercise cost transferred. It's updated at the same time `exercisedAmount` is updated. The calculation is `(amount * selectedIssuance.data.strike) / selectedIssuance.data.amount`.
 
-#### `strikeAmount`
+#### `exerciseCost`
 
 **Type: `uint256`**
 
-Amount of strike tokens that have been transferred to the contract. It actually represents the amount of strike tokens the writer has deposited as a collateral at option's creation (`create()` call). This is an utility variable used to not always have to calculate the strike amount. We compute it at the creation of the option. The calculation is `(optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals())`.
+Amount of strike tokens that have been transferred to the contract. It actually represents the amount of strike tokens the writer has deposited as a collateral at option's creation (`create()` call). This is an utility variable used to not always have to calculate the exercise cost. We compute it at the creation of the option. The calculation is `(optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals())`.
 
 ### Function Descriptions
 
