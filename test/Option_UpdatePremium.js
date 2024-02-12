@@ -34,16 +34,16 @@ describe("Updating option premium", function () {
 
   it("Should fail to update since no issuance exists", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
-    await expect(optionContract.connect(acct1).updatePremium(0, 1)).to.be.revertedWith("seller");
+    await expect(optionContract.connect(acct1).updatePremium(0, 1)).to.be.revertedWith("writer");
   });
 
-  it("Should fail to update premium since the updater is not the seller", async function () {
+  it("Should fail to update premium since the updater is not the writer", async function () {
     const { callOption, optionContract, token1, acct1, acct2 } = await loadFixture(deployInfraFixture);
 
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
 
     await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
 
-    await expect(optionContract.connect(acct2).updatePremium(0, 1)).to.be.revertedWith("seller");
+    await expect(optionContract.connect(acct2).updatePremium(0, 1)).to.be.revertedWith("writer");
   });
 });

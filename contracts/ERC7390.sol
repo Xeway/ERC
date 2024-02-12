@@ -21,7 +21,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
 
         OptionIssuance memory newIssuance;
         newIssuance.data = optionData;
-        newIssuance.seller = _msgSender();
+        newIssuance.writer = _msgSender();
 
         IERC20 underlyingToken = IERC20(optionData.underlyingToken);
         newIssuance.strikeAmount = (optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals());
@@ -66,7 +66,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
 
             bool success = IERC20(selectedIssuance.data.premiumToken).transferFrom(
                 _msgSender(),
-                selectedIssuance.seller,
+                selectedIssuance.writer,
                 premiumPaid
             );
             if (!success) revert TransferFailed();
@@ -94,8 +94,8 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         if (transferredStrikeAmount == 0) revert Forbidden();
 
         if (selectedIssuance.data.side == Side.Call) {
-            // Buyer pays seller for the underlying token(s) at strike price
-            _transferFrom(strikeToken, _msgSender(), selectedIssuance.seller, transferredStrikeAmount);
+            // Buyer pays writer for the underlying token(s) at strike price
+            _transferFrom(strikeToken, _msgSender(), selectedIssuance.writer, transferredStrikeAmount);
 
             // Transfer underlying token(s) to buyer
             _transfer(underlyingToken, _msgSender(), amount);
@@ -103,7 +103,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
             if (selectedIssuance.strikeAmount < selectedIssuance.transferredStrikeAmount + transferredStrikeAmount) revert Forbidden();
 
             // Buyer transfers the underlying token(s) to writer
-            _transferFrom(underlyingToken, _msgSender(), selectedIssuance.seller, amount);
+            _transferFrom(underlyingToken, _msgSender(), selectedIssuance.writer, amount);
 
             // Pay buyer the strike price
             _transfer(strikeToken, _msgSender(), transferredStrikeAmount);
@@ -120,7 +120,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function retrieveExpiredTokens(uint256 id) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        if (_msgSender() != selectedIssuance.seller) revert Forbidden();
+        if (_msgSender() != selectedIssuance.writer) revert Forbidden();
         if (block.timestamp <= selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
 
         if (selectedIssuance.data.amount > selectedIssuance.exercisedAmount) {
@@ -140,7 +140,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function cancel(uint256 id) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        if (_msgSender() != selectedIssuance.seller) revert Forbidden();
+        if (_msgSender() != selectedIssuance.writer) revert Forbidden();
         if (selectedIssuance.soldAmount != 0) revert Forbidden();
     
         if (selectedIssuance.data.side == Side.Call) {
@@ -156,7 +156,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function updatePremium(uint256 id, uint256 amount) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        if (_msgSender() != selectedIssuance.seller) revert Forbidden();
+        if (_msgSender() != selectedIssuance.writer) revert Forbidden();
         if (block.timestamp > selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
 
         _issuance[id].data.premium = amount;
@@ -166,7 +166,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
     function updateAllowed(uint256 id, address[] memory allowed) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
-        if (_msgSender() != selectedIssuance.seller) revert Forbidden();
+        if (_msgSender() != selectedIssuance.writer) revert Forbidden();
         if (block.timestamp > selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
 
         _issuance[id].data.allowed = allowed;

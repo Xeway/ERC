@@ -17,7 +17,7 @@ describe("Creation", function () {
     await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
 
     const option = await optionContract.issuance(0);
-    expect(option.seller).to.equal(acct1.address);
+    expect(option.writer).to.equal(acct1.address);
     expect(option.exercisedAmount).to.equal(0);
     expect(option.soldAmount).to.equal(0);
     expect(option.data.side).to.equal(callOption.side);
@@ -45,7 +45,7 @@ describe("Creation", function () {
     await expect(optionContract.connect(acct1).create(putOption)).to.emit(optionContract, "Created");
 
     const option = await optionContract.issuance(0);
-    expect(option.seller).to.equal(acct1.address);
+    expect(option.writer).to.equal(acct1.address);
     expect(option.exercisedAmount).to.equal(0);
     expect(option.soldAmount).to.equal(0);
     expect(option.data.side).to.equal(1);

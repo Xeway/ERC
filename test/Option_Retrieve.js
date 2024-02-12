@@ -32,7 +32,7 @@ describe("Retrieving expired tokens", function () {
 
     // Make sure data is deleted
     const option = await optionContract.issuance(0);
-    expect(option.seller).to.equal(ZERO_ADDRESS);
+    expect(option.writer).to.equal(ZERO_ADDRESS);
   });
 
   it("Should retrieve the non-exercised tokens (all) of put option", async function () {
@@ -54,7 +54,7 @@ describe("Retrieving expired tokens", function () {
 
     // Make sure data is deleted
     const option = await optionContract.issuance(0);
-    expect(option.seller).to.equal(ZERO_ADDRESS);
+    expect(option.writer).to.equal(ZERO_ADDRESS);
   });
 
   it("Should retrieve the non-exercised tokens of call contract", async function () {
@@ -96,7 +96,7 @@ describe("Retrieving expired tokens", function () {
 
     // Make sure data is deleted
     const option = await optionContract.issuance(0);
-    expect(option.seller).to.equal(ZERO_ADDRESS);
+    expect(option.writer).to.equal(ZERO_ADDRESS);
   });
 
   it("Should retrieve the non-exercised tokens of put contract", async function () {
@@ -143,15 +143,15 @@ describe("Retrieving expired tokens", function () {
 
     // Make sure data is deleted
     const option = await optionContract.issuance(0);
-    expect(option.seller).to.equal(ZERO_ADDRESS);
+    expect(option.writer).to.equal(ZERO_ADDRESS);
   });
 
   it("Should fail to retrieve tokens since no issuance exists", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
-    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0)).to.be.revertedWith("seller");
+    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0)).to.be.revertedWith("writer");
   });
 
-  it("Should fail to retrieve tokens since retriever is not the seller", async function () {
+  it("Should fail to retrieve tokens since retriever is not the writer", async function () {
     const { callOption, optionContract, token1, acct1, acct2 } = await loadFixture(deployInfraFixture);
 
     await token1.connect(acct1).approve(optionContract.target, OPTION_COUNT);
@@ -163,7 +163,7 @@ describe("Retrieving expired tokens", function () {
 
     await time.increase(2 * 60 * 60);
 
-    await expect(optionContract.connect(acct2).retrieveExpiredTokens(0)).to.be.revertedWith("seller");
+    await expect(optionContract.connect(acct2).retrieveExpiredTokens(0)).to.be.revertedWith("writer");
   });
 
   it("Should fail to retrieve tokens since exercise window is still open", async function () {
