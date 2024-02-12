@@ -23,6 +23,8 @@ A buyer can decide to buy only a fraction of the issuance (meaning multiple buye
 Also, the seller can decide to cancel the issuance if no option has been bought yet. He also has the right to update the premium price at any time. This doesn't affect the already bought options.\
 The underlying token, strike token and premium token are ERC-20 tokens.
 
+In the following, the plural term option**s** will sometimes be used. This can refer to the amount of redeem tokens a buyer purchased and can exercise.
+
 ## Motivation
 
 Options are widely used financial instruments, and have a true usefulness for investors and traders. It offers versatile risk management tools and speculative opportunities.\
@@ -200,7 +202,7 @@ Amount of strike tokens that have been transferred to the seller (call) or buyer
 
 **Type: `uint256`**
 
-Amount of strike tokens that have been transferred to the contract. This is an utility variable used to not always have to calculate the strike amount. We compute it at the creation of the option. The calculation is `(optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals())`.
+Amount of strike tokens that have been transferred to the contract. It actually represents the amount of strike tokens the seller has deposited as a collateral at option's creation (`create()` call). This is an utility variable used to not always have to calculate the strike amount. We compute it at the creation of the option. The calculation is `(optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals())`.
 
 ### Function Descriptions
 
@@ -476,9 +478,10 @@ The premium is to be determined by the option seller. Seller is free to choose h
 This ERC is intended to represent vanilla options. However, exotic options can be built on top of this ERC.\
 Instead of representing a single option that would be useless after the expiration date, this contract can store as many issuances as needed. Each issuance is identified by an id, and can be bought, exercised, cancelled, etc., independently of the other issuances. This is a better approach for gas costs purposes.
 
-It's designed so that the option can be either European or American, by introduction of the `exerciseWindowStart` and `exerciseWindowEnd` data points. A buyer can only exercise between `exerciseWindowStart` and `exerciseWindowEnd`.\
-If the option seller considers the option to be European, he can set the `exerciseWindowStart` in line with the expiration date, and `exerciseWindowEnd` to the expiration date + a determined time range so that buyers have a period of time to exercise.\
-If the option seller considers the option to be American, he can set the `exerciseWindowStart` to the current time, and the buyer will be able to exercise the option immediately.
+It's designed so that the option can be either European or American, by introduction of the `exerciseWindowStart` and `exerciseWindowEnd` data points. A buyer can only exercise between `exerciseWindowStart` and `exerciseWindowEnd`.
+
+- If the option seller considers the option to be European, he can set the `exerciseWindowStart` in line with the expiration date, and `exerciseWindowEnd` to the expiration date + a determined time range so that buyers have a period of time to exercise.
+- If the option seller considers the option to be American, he can set the `exerciseWindowStart` to the current time, and the buyer will be able to exercise the option immediately.
 
 The contract inherently supports multiple buyers for a single option issuance. This is achieved by using ERC-1155 tokens for representing the options. When a buyer buys a fraction of the option issuance, he receives ERC-1155 tokens that represent the fraction of the option issuance. These tokens can be exchanged between users, and are used for exercising the option. With this mechanism, a buyer can decide to exercise only a fraction of what he bought.
 
@@ -494,7 +497,10 @@ For preventing clear arbitrage cases when option seller considers the issuance t
 
 This standard implements the `updatePremium` function, which allows the seller to update the premium price at any time. This function can lead to security issues for the buyer: a buyer could buy an option, and the seller could front-run buyer's transaction by updating the premium price to a very high value. To prevent this, we advise the buyer to only allow for the agreed amount of premium to be spent by the contract, not more.
 
-Once again, we advise writers to frequently check the underlying token price, and take the best decision for them.
+The contract supports multiple buyers for a single option issuance, meaning fractions of the option issuance can be bought. The ecosystem doesn't really support non-integers, so fractions can sometimes lead to rounding errors. This can lead to unexpected results, especially in the `exercise` and `buy` functions.
+
+- In the `buy` function, if the premium is set, the buyer has to pay for only a fraction proportional to the amount of options he wants to buy. If that fraction is not an integer, this will truncate and therefore round to floor. This means that that seller will receive less than the expected premium. We consider this risk pretty negligible given that most tokens have a high number of decimals, but it's important to be aware of it. Some buyer could exploit this by buying repeatedly small fraction, and therefore paying less than the expected premium. However, this probably wouldn't be profitable given the gas costs.
+- In the `exercise` function, the exercise cost (`(amountToExercise * selectedIssuance.data.strike) / selectedIssuance.data.amount`) is proportional to the amount of options the buyer wants to exercise. So according to the same logic, the seller will receive less than expected in case of a call option, and the buyer will receive less than expected in case of a put option. Again, this risk could be exploited, but it's probably not profitable given the gas costs.
 
 ## Copyright
 
