@@ -196,13 +196,15 @@ Amount of underlying tokens that have been bought for this issuance.
 
 **Type: `uint256`**
 
-Amount of strike tokens that have been transferred to the writer (call) or buyers (put) of the option issuance. This is an utility variable used to not always have to calculate the total exercise cost transferred. It's updated at the same time `exercisedAmount` is updated. The calculation is `(amount * selectedIssuance.data.strike) / selectedIssuance.data.amount`.
+Amount of `strikeToken` tokens that have been transferred to the writer (call) or buyers (put) of the option issuance.\
+This is an utility variable used to not always have to calculate the total exercise cost transferred. It's updated at the same time `exercisedAmount` is updated. The calculation is `(exercisedAmount * selectedIssuance.data.strike) / selectedIssuance.data.amount`.
 
 #### `exerciseCost`
 
 **Type: `uint256`**
 
-Amount of strike tokens that have been transferred to the contract. It actually represents the amount of strike tokens the writer has deposited as a collateral at option's creation (`create()` call). This is an utility variable used to not always have to calculate the exercise cost. We compute it at the creation of the option. The calculation is `(optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals())`.
+Exercise cost. It represents the collateral the writer has to deposit to the contract (put), or the amount of `strikeToken` tokens a writer can receive if all buyers decide to exercise (call).\
+This is an utility variable used to not always have to calculate the exercise cost. We compute it at the creation of the option. The calculation is `(strike * amount) / (10 ** underlyingToken.decimals())`.
 
 ### Function Descriptions
 
@@ -417,53 +419,63 @@ Reverts when the caller has insufficient balance to perform the action.
 
 #### Call Option
 
-Let's say Bob sells an **call** option that Alice wants to buy.\
-He gives the right to Alice to buy **8 TokenA** tokens at **25 TokenB** each between **14th of July 2023** and **16th of July 2023**.\
-For such a contract, he asks Alice to give him **10 TokenC** as a premium.\
+Let's say Bob sells a **call** option.\
+He gives the right to anyone to buy **8 TokenA** at **25 TokenB** each between **14th of July 2023** and **16th of July 2023**.\
+For such a contract, he wants to receive a premium of **10 TokenC**.
 
-To create the contract, he will give the following parameters:
+Before creating the option, Bob has to transfer the collateral to the contract. This collateral corresponds to the tokens he will have to give if the option if fully exercised (`amount`). For this option, he has to give as collateral 8 TokenA. He does that by calling the function `approve(address spender, uint256 amount)` on the TokenA's contract and as parameters the contract's address (`spender`) and for `amount`: **8 \* 10^(TokenA's decimals)**. Then Bob can execute `create()` on the contract for issuing the option, giving the following parameters:
 
 - `side`: **Call**
 - `underlyingToken`: **TokenA's address**
 - `amount`: **8 \* 10^(TokenA's decimals)**
 - `strikeToken`: **TokenB's address**
-- `strike`: **8 \* 25 \* 10^(TokenB's decimals)**
+- `strike`: **25 \* 10^(TokenB's decimals)**
 - `premiumToken`: **TokenC's address**
 - `premium`: **10 \* 10^(TokenC's decimals)**
 - `exerciseWindowStart`: **1689292800** *(2023-07-14 timestamp)*
 - `exerciseWindowEnd`: **1689465600** *(2023-07-16 timestamp)*
+- `allowed`: `[]` (open to anyone)
 
-Once the contract created, Bob has to transfer the collateral to the contract. This collateral corresponds to the tokens he will have to give Alice if she decides to exercise the option. For this option, he has to give as collateral 8 TokenA. He does that by calling the function `approve(address spender, uint256 amount)` on the TokenA's contract and as parameters the contract's address (`spender`) and for `amount`: **8 \* 10^(TokenA's decimals)**. Then Bob can execute `create` on the contract for issuing the option.
+The issuance has ID 88.
 
-Alice for its part, has to allow the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **10 \* 10^(TokenC's decimals)**. She can then execute `buy` on the contract in order to buy the option.
+Alice wants to be able to buy only **4** TokenA. She will first have to pay the premium (that is proportional to its share) by allowing the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **4\*10^(TokenA's decimals) \* 10\*10^(TokenC's decimals) / 8\*10^(TokenA's decimals)** (amountToBuy \* `premium` / `amount`). She can then execute `buy(88, 4 \* 10^(TokenA's decimals))` on the contract, and will receive 4\*10^(TokenA's decimals) redeem tokens.
 
-We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at 50 TokenB! She needs to allow the contract to transfer **8 \* 25 \* 10^(TokenB's decimals)** TokenBs from her account to match the required strike funding. When she calls `exercise` on the contract, the contract will transfer the strike funding to Bob and the TokenA tokens that Bob gave as collateral during `create` call to Alice.
+John, for his part, wants to buy **2** TokenA. He does the same thing and receives **2\*10^(TokensA's decimals)** redeem tokens.
 
-If she decides to sell the TokenA tokens, she'd make a profit of 8\*50 - 8\*25 = 200 TokenB!
+We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at 50 TokenB! She needs to allow the contract to transfer **4\*10^(TokenA's decimals) \* 25\*10^(TokenB's decimals) / 8\*10^(TokenA's decimals)** (amountToExercise \* `strike` / `amount`) TokenBs from her account to be able to exercise. When she calls `exercise(88, 4\*10^(TokenA's decimals))` on the contract, it will transfer 4 TokenA to Alice, and 4\*25 TokenB to Bob.
+
+John decided to give his right to exercise to his friend Jimmy. He did that simply by transferring his **2\*10^(TokensA's decimals)** redeem tokens to Jimmy's address.\
+Jimmy decides to only buy **1** TokenA with the option. So he will give to Bob (through the contract) **1\*10^(TokenA's decimals) \* 25\*10^(TokenB's decimals) / 8\*10^(TokenA's decimals)**.
 
 #### Put Option
 
-Let's say Bob sells a put option to Alice.\
-He gives the right to Alice to sell **8 TokenA** tokens at **25 TokenB** each between **14th of July 2023** and **16th of July 2023**.\
-For such a contract, he asks Alice to give him **10 TokenC** as a premium.\
+Let's say Bob sells a **put** option.\
+He gives the right to anyone to sell to him **8 TokenA** at **25 TokenB** each between **14th of July 2023** and **16th of July 2023**.\
+For such a contract, he wants to receive a premium of **10 TokenC**.
 
-To create the contract, he will give the following parameters:
+Before creating the option, Bob has to transfer the collateral to the contract. This collateral corresponds to the tokens he will have to give if the option if fully exercised (`exerciseCost`). For this option, he has to give as collateral 200 TokenB (8 \* 25). He does that by calling the function `approve(address spender, uint256 amount)` on the TokenB's contract and as parameters the contract's address (`spender`) and for `amount`: **25\*10^(Token B's decimals) \* 8\*10^(TokenB's decimals) / 10^(TokenA's decimals)** (`strike` \* `amount` / 10^(`underlyingToken`'s decimals)). Then Bob can execute `create()` on the contract for issuing the option, giving the following parameters:
 
-- `side`: **Put**
+- `side`: **Call**
 - `underlyingToken`: **TokenA's address**
 - `amount`: **8 \* 10^(TokenA's decimals)**
 - `strikeToken`: **TokenB's address**
-- `strike`: **8 \* 25 \* 10^(TokenB's decimals)**
+- `strike`: **25 \* 10^(TokenB's decimals)**
 - `premiumToken`: **TokenC's address**
 - `premium`: **10 \* 10^(TokenC's decimals)**
 - `exerciseWindowStart`: **1689292800** *(2023-07-14 timestamp)*
 - `exerciseWindowEnd`: **1689465600** *(2023-07-16 timestamp)*
+- `allowed`: `[]` (open to anyone)
 
-Bob has to transfer collateral to the contract. This collateral corresponds to the funds he will have to give to Alice if she decides to exercise all the options. He has to give as collateral 200 TokenB (8 \* 25) and does that by calling the function `approve(address spender, uint256 amount)` on the TokenB's contract. As parameters he will give the contract's address (`spender`) and for `amount`: **(`strike`\*`amount` / 10^(TokenA's decimals))**. Then he can execute `create` on the contract for issuing the options.
+The issuance has ID 88.
 
-Alice for her part has to allow the spending of **10 TokenC** by calling `approve(address spender, uint256 amount)` on the TokenC's contract, with as parameters the contract's address (`spender`) and for `amount`: **10 \* 10^(TokenC's decimals)**. Then, she can execute `buy` on the contract in order to buy all the options.
+Alice wants to be able to sell only **4** TokenA. She will first have to pay the premium (that is proportional to its share) by allowing the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **4\*10^(TokenA's decimals) \* 10\*10^(TokenC's decimals) / 8\*10^(TokenA's decimals)** (amountToBuy \* `premium` / `amount`). She can then execute `buy(88, 4 \* 10^(TokenA's decimals))` on the contract, and will receive 4\*10^(TokenA's decimals) redeem tokens.
 
-We're on the 15th of July, and Alice wants to exercise her options because 1 TokenA is traded at only 10 TokenB! To exercise she has to approve the transferring of **8 TokenA** tokens and call `exercise` on the contract. Bob receives 8 TokenA tokens, and Alice 200 TokenB (8 TokenA \* 25 TokenB). She just made a profit of 200 - 8\*10 = 120 TokenB!
+John, for his part, wants to sell **2** TokenA. He does the same thing and receives **2\*10^(TokensA's decimals)** redeem tokens.
+
+We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at only 10 TokenB! She needs to allow the contract to transfer **4 \* 10^(TokenA's decimals)** TokenAs from her account to be able to exercise. When she calls `exercise(88, 4 \* 10^(TokenA's decimals))` on the contract, it will transfer 4\*25 TokenB to Alice and 4 TokenA to Bob.
+
+John decided to give his right to exercise to his friend Jimmy. He did that simply by transferring his **2\*10^(TokensA's decimals)** redeem tokens to Jimmy's address.\
+Jimmy decides to only sell **1** TokenA with the option. So he will give to Bob (through the contract) **1\*10^(TokenA's decimals)**.
 
 #### Retrieve collateral
 
@@ -500,7 +512,7 @@ This standard implements the `updatePremium` function, which allows the writer t
 The contract supports multiple buyers for a single option issuance, meaning fractions of the option issuance can be bought. The ecosystem doesn't really support non-integers, so fractions can sometimes lead to rounding errors. This can lead to unexpected results, especially in the `exercise` and `buy` functions.
 
 - In the `buy` function, if the premium is set, the buyer has to pay for only a fraction proportional to the amount of options he wants to buy. If that fraction is not an integer, this will truncate and therefore round to floor. This means that that writer will receive less than the expected premium. We consider this risk pretty negligible given that most tokens have a high number of decimals, but it's important to be aware of it. Some buyer could exploit this by buying repeatedly small fraction, and therefore paying less than the expected premium. However, this probably wouldn't be profitable given the gas costs.
-- In the `exercise` function, the exercise cost (`(amountToExercise * selectedIssuance.data.strike) / selectedIssuance.data.amount`) is proportional to the amount of options the buyer wants to exercise. So according to the same logic, the writer will receive less than expected in case of a call option, and the buyer will receive less than expected in case of a put option. Again, this risk could be exploited, but it's probably not profitable given the gas costs.
+- In the `exercise` function, the exercise cost (`(amountToExercise * selectedIssuance.data.strike) / selectedIssuance.data.amount`) is proportional to the amount of options the buyer wants to exercise. So according to the same logic, the writer will receive less than expected in case of a call option, and the buyer will receive less than expected in case of a put option. Again, this risk could be exploited, but it's probably not profitable given the gas costs. At the end of the option's life, due to this rounding, some tokens could remain in the contract. The writer can retrieve them using the `retrieveExpiredTokens()` function.
 
 ## Copyright
 
