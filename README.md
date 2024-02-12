@@ -468,7 +468,7 @@ Before creating the option, Bob has to transfer the collateral to the contract. 
 
 The issuance has ID 88.
 
-Alice wants to be able to sell only **4** TokenA. She will first have to pay the premium (that is proportional to its share) by allowing the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **4\*10^(TokenA's decimals) \* 10\*10^(TokenC's decimals) / 8\*10^(TokenA's decimals)** (amountToBuy \* `premium` / `amount`). She can then execute `buy(88, 4 \* 10^(TokenA's decimals))` on the contract, and will receive 4\*10^(TokenA's decimals) redeem tokens.
+Alice wants to be able to sell only **4** TokenA. She will first have to pay the premium (that is proportional to its share) by allowing the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **4\*10^(TokenA's decimals) \* 10\*10^(TokenC's decimals) / 8\*10^(TokenA's decimals)** (amountToSell \* `premium` / `amount`). She can then execute `buy(88, 4 \* 10^(TokenA's decimals))` on the contract, and will receive 4\*10^(TokenA's decimals) redeem tokens.
 
 John, for his part, wants to sell **2** TokenA. He does the same thing and receives **2\*10^(TokensA's decimals)** redeem tokens.
 
