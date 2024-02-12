@@ -455,7 +455,7 @@ For such a contract, he wants to receive a premium of **10 TokenC**.
 
 Before creating the option, Bob has to transfer the collateral to the contract. This collateral corresponds to the tokens he will have to give if the option if fully exercised (`exerciseCost`). For this option, he has to give as collateral 200 TokenB (8 \* 25). He does that by calling the function `approve(address spender, uint256 amount)` on the TokenB's contract and as parameters the contract's address (`spender`) and for `amount`: **25\*10^(Token B's decimals) \* 8\*10^(TokenB's decimals) / 10^(TokenA's decimals)** (`strike` \* `amount` / 10^(`underlyingToken`'s decimals)). Then Bob can execute `create()` on the contract for issuing the option, giving the following parameters:
 
-- `side`: **Call**
+- `side`: **Put**
 - `underlyingToken`: **TokenA's address**
 - `amount`: **8 \* 10^(TokenA's decimals)**
 - `strikeToken`: **TokenB's address**
