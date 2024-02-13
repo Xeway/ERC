@@ -84,9 +84,9 @@ interface IERC7390 {
 
     function exercise(uint256 id, uint256 amount) external;
 
-    function retrieveExpiredTokens(uint256 id) external;
+    function retrieveExpiredTokens(uint256 id, address receiver) external;
 
-    function cancel(uint256 id) external;
+    function cancel(uint256 id, address receiver) external;
 
     function updatePremium(uint256 id, uint256 amount) external;
 
@@ -271,13 +271,15 @@ MUST revert if `amount` is 0 or buyer hasn't the necessary redeem tokens to exer
 #### `retrieveExpiredTokens`
 
 ```solidity
-function retrieveExpiredTokens(uint256 id) external;
+function retrieveExpiredTokens(uint256 id, address receiver) external;
 ```
 
-Allows option writer to retrieve the collateral tokens that were not exercised. If the option is a call, writer retrieves the underlying tokens. If the option is a put, writer retrieves the strike tokens.
+Allows writer to retrieve the collateral tokens that were not exercised. These tokens are transferred to `receiver`.\
+If the option is a call, `receiver` retrieves the underlying tokens. If the option is a put, `receiver` retrieves the strike tokens.
 
 MUST revert if the address calling the function is not the writer of the option issuance.\
-MUST revert if `exerciseWindowEnd` is greater or equals than the current time.
+MUST revert if `exerciseWindowEnd` is greater or equals than the current time.\
+If equals to the zero address, MUST set `receiver` to caller's address.
 
 *Transfers the un-exercised collateral to the writer's address.*
 *Deletes the option issuance from the contract if the retrieval was successful.*
@@ -286,13 +288,15 @@ MUST revert if `exerciseWindowEnd` is greater or equals than the current time.
 #### `cancel`
 
 ```solidity
-function cancel(uint256 id) external;
+function cancel(uint256 id, address receiver) external;
 ```
 
-Allows the writer to cancel the option and retrieve tokens used as collateral. If the option is a call, writer retrieves the underlying tokens. If the option is a put, writer retrieves the strike tokens.
+Allows writer to cancel the option and retrieve tokens used as collateral. These tokens are transferred to `receiver`.\
+If the option is a call, `receiver` retrieves the underlying tokens. If the option is a put, `receiver` retrieves the strike tokens.
 
 MUST revert if the address calling the function is not the writer of the option issuance.\
-MUST revert if at least one option's fraction has been bought.
+MUST revert if at least one option's fraction has been bought.\
+If equals to the zero address, MUST set `receiver` to caller's address.
 
 *Transfers the un-exercised collateral to the writer's address.*
 *Deletes the option issuance from the contract if the cancelation was successful.*
@@ -420,7 +424,7 @@ Reverts when the caller has insufficient balance to perform the action.
 #### Call Option
 
 Let's say Bob sells a **call** option.\
-He gives the right to anyone to buy **8 TokenA** at **25 TokenB** each between **14th of July 2023** and **16th of July 2023**.\
+He gives the right to anyone to buy **8 TokenA** at **25 TokenB** each between **14th of July 2023** and **16th of July 2023 (at midnight)**.\
 For such a contract, he wants to receive a premium of **10 TokenC**.
 
 Before creating the option, Bob has to transfer the collateral to the contract. This collateral corresponds to the tokens he will have to give if the option if fully exercised (`amount`). For this option, he has to give as collateral 8 TokenA. He does that by calling the function `approve(address spender, uint256 amount)` on the TokenA's contract and as parameters the contract's address (`spender`) and for `amount`: **8 \* 10^(TokenA's decimals)**. Then Bob can execute `create()` on the contract for issuing the option, giving the following parameters:
@@ -450,7 +454,7 @@ Jimmy decides to only buy **1** TokenA with the option. So he will give to Bob (
 #### Put Option
 
 Let's say Bob sells a **put** option.\
-He gives the right to anyone to sell to him **8 TokenA** at **25 TokenB** each between **14th of July 2023** and **16th of July 2023**.\
+He gives the right to anyone to sell to him **8 TokenA** at **25 TokenB** each between **14th of July 2023** and **16th of July 2023 (at midnight)**.\
 For such a contract, he wants to receive a premium of **10 TokenC**.
 
 Before creating the option, Bob has to transfer the collateral to the contract. This collateral corresponds to the tokens he will have to give if the option if fully exercised (`exerciseCost`). For this option, he has to give as collateral 200 TokenB (8 \* 25). He does that by calling the function `approve(address spender, uint256 amount)` on the TokenB's contract and as parameters the contract's address (`spender`) and for `amount`: **25\*10^(Token B's decimals) \* 8\*10^(TokenB's decimals) / 10^(TokenA's decimals)** (`strike` \* `amount` / 10^(`underlyingToken`'s decimals)). Then Bob can execute `create()` on the contract for issuing the option, giving the following parameters:
@@ -479,7 +483,7 @@ Jimmy decides to only sell **1** TokenA with the option. So he will give to Bob 
 
 #### Retrieve collateral
 
-Let's say Alice never exercised his option because it wasn't profitable enough for her. To retrieve his collateral, Bob would have to wait for the current time to be greater than `exerciseWindowEnd`. In the examples, this characteristic is set to 2 days, so he would be able to get back his collateral from the 16th of July by simply calling `retrieveExpiredTokens`.
+Let's say Alice never exercised his option because it wasn't profitable enough for her. To retrieve his collateral, Bob would have to wait for the current time to be greater than `exerciseWindowEnd`. In the examples, this characteristic is set to 2 days, so he would be able to get back his collateral from the 16th of July by simply calling `retrieveExpiredTokens()`.
 
 ## Rationale
 

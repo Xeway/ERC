@@ -117,19 +117,21 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         emit Exercised(id, amount);
     }
 
-    function retrieveExpiredTokens(uint256 id) public virtual nonReentrant {
+    function retrieveExpiredTokens(uint256 id, address receiver) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
         if (_msgSender() != selectedIssuance.writer) revert Forbidden();
         if (block.timestamp <= selectedIssuance.data.exerciseWindowEnd) revert TimeForbidden();
 
         if (selectedIssuance.data.amount > selectedIssuance.exercisedAmount) {
+            if (receiver == address(0)) receiver = _msgSender();
+
             if (selectedIssuance.data.side == Side.Call) {
                 uint256 underlyingTokenGiveback = selectedIssuance.data.amount - selectedIssuance.exercisedAmount;
-                _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), underlyingTokenGiveback);
+                _transfer(IERC20(selectedIssuance.data.underlyingToken), receiver, underlyingTokenGiveback);
             } else {
                 uint256 strikeTokenGiveback = selectedIssuance.exerciseCost - selectedIssuance.transferredExerciseCost;
-                _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), strikeTokenGiveback);
+                _transfer(IERC20(selectedIssuance.data.strikeToken), receiver, strikeTokenGiveback);
             }                        
         }
 
@@ -137,16 +139,18 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         emit Expired(id);
     }
 
-    function cancel(uint256 id) public virtual nonReentrant {
+    function cancel(uint256 id, address receiver) public virtual nonReentrant {
         OptionIssuance memory selectedIssuance = _issuance[id];
 
         if (_msgSender() != selectedIssuance.writer) revert Forbidden();
         if (selectedIssuance.soldAmount != 0) revert Forbidden();
+
+        if (receiver == address(0)) receiver = _msgSender();
     
         if (selectedIssuance.data.side == Side.Call) {
-            _transfer(IERC20(selectedIssuance.data.underlyingToken), _msgSender(), selectedIssuance.data.amount);
+            _transfer(IERC20(selectedIssuance.data.underlyingToken), receiver, selectedIssuance.data.amount);
         } else {
-            _transfer(IERC20(selectedIssuance.data.strikeToken), _msgSender(), selectedIssuance.exerciseCost);          
+            _transfer(IERC20(selectedIssuance.data.strikeToken), receiver, selectedIssuance.exerciseCost);          
         }
 
         delete _issuance[id];

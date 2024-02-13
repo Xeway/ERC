@@ -22,7 +22,7 @@ describe("Canceling", function () {
     expect(await token1.balanceOf(optionContract.target)).to.equal(OPTION_COUNT);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE - OPTION_COUNT);
 
-    await expect(optionContract.connect(acct1).cancel(0)).to.emit(optionContract, "Canceled");
+    await expect(optionContract.connect(acct1).cancel(0, acct1.address)).to.emit(optionContract, "Canceled");
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(0);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE);
@@ -42,7 +42,7 @@ describe("Canceling", function () {
     expect(await token2.balanceOf(optionContract.target)).to.equal(STRIKE);
     expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE - STRIKE);
 
-    await expect(optionContract.connect(acct1).cancel(0)).to.emit(optionContract, "Canceled");
+    await expect(optionContract.connect(acct1).cancel(0, acct1.address)).to.emit(optionContract, "Canceled");
 
     expect(await token2.balanceOf(optionContract.target)).to.equal(0);
     expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE);
@@ -73,7 +73,7 @@ describe("Canceling", function () {
     expect(await token2.balanceOf(acct2.address)).to.equal(TOKEN2_START_BALANCE - premiumPaid);
     expect(await optionContract.balanceOf(acct2.address, 0)).to.equal(boughtOptions);
 
-    await expect(optionContract.connect(acct1).cancel(0)).to.be.revertedWith("soldAmount");
+    await expect(optionContract.connect(acct1).cancel(0, acct1.address)).to.be.revertedWith("soldAmount");
 
     const option = await optionContract.issuance(0);
     expect(option.writer).to.not.equal(ZERO_ADDRESS);
@@ -81,7 +81,7 @@ describe("Canceling", function () {
 
   it("Should fail to cancel since no issuance exists", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
-    await expect(optionContract.connect(acct1).cancel(0)).to.be.revertedWith("writer");
+    await expect(optionContract.connect(acct1).cancel(0), acct1.address).to.be.revertedWith("writer");
   });
 
   it("Should fail to cancel since the canceling party is not the writer", async function () {
@@ -94,6 +94,6 @@ describe("Canceling", function () {
     expect(await token1.balanceOf(optionContract.target)).to.equal(OPTION_COUNT);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE - OPTION_COUNT);
 
-    await expect(optionContract.connect(acct2).cancel(0)).to.be.revertedWith("writer");
+    await expect(optionContract.connect(acct2).cancel(0, acct2.address)).to.be.revertedWith("writer");
   });
 });

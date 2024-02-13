@@ -49,9 +49,9 @@ interface IERC7390 {
 
     function exercise(uint256 id, uint256 amount) external;
 
-    function retrieveExpiredTokens(uint256 id) external;
+    function retrieveExpiredTokens(uint256 id, address receiver) external;
 
-    function cancel(uint256 id) external;
+    function cancel(uint256 id, address receiver) external;
 
     function updatePremium(uint256 id, uint256 amount) external;
 
