@@ -442,11 +442,11 @@ Before creating the option, Bob has to transfer the collateral to the contract. 
 
 The issuance has ID 88.
 
-Alice wants to be able to buy only **4** TokenA. She will first have to pay the premium (that is proportional to its share) by allowing the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **4\*10^(TokenA's decimals) \* 10\*10^(TokenC's decimals) / 8\*10^(TokenA's decimals)** (amountToBuy \* `premium` / `amount`). She can then execute `buy(88, 4 \* 10^(TokenA's decimals))` on the contract, and will receive 4\*10^(TokenA's decimals) redeem tokens.
+Alice wants to be able to buy only **4** TokenA. She will first have to pay the premium (that is proportional to its share) by allowing the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **4\*10^(TokenA's decimals) \* 10\*10^(TokenC's decimals) / 8\*10^(TokenA's decimals)** (amountToBuy \* `premium` / `amount`). She can then execute `buy(88, 4 * 10^(TokenA's decimals))` on the contract, and will receive 4\*10^(TokenA's decimals) redeem tokens.
 
 John, for his part, wants to buy **2** TokenA. He does the same thing and receives **2\*10^(TokensA's decimals)** redeem tokens.
 
-We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at 50 TokenB! She needs to allow the contract to transfer **4\*10^(TokenA's decimals) \* 25\*10^(TokenB's decimals) / 8\*10^(TokenA's decimals)** (amountToExercise \* `strike` / `amount`) TokenBs from her account to be able to exercise. When she calls `exercise(88, 4\*10^(TokenA's decimals))` on the contract, it will transfer 4 TokenA to Alice, and 4\*25 TokenB to Bob.
+We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at 50 TokenB! She needs to allow the contract to transfer **4\*10^(TokenA's decimals) \* 25\*10^(TokenB's decimals) / 8\*10^(TokenA's decimals)** (amountToExercise \* `strike` / `amount`) TokenBs from her account to be able to exercise. When she calls `exercise(88, 4 * 10^(TokenA's decimals))` on the contract, it will transfer 4 TokenA to Alice, and 4\*25 TokenB to Bob.
 
 John decided to give his right to exercise to his friend Jimmy. He did that simply by transferring his **2\*10^(TokensA's decimals)** redeem tokens to Jimmy's address.\
 Jimmy decides to only buy **1** TokenA with the option. So he will give to Bob (through the contract) **1\*10^(TokenA's decimals) \* 25\*10^(TokenB's decimals) / 8\*10^(TokenA's decimals)**.
@@ -472,11 +472,11 @@ Before creating the option, Bob has to transfer the collateral to the contract. 
 
 The issuance has ID 88.
 
-Alice wants to be able to sell only **4** TokenA. She will first have to pay the premium (that is proportional to its share) by allowing the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **4\*10^(TokenA's decimals) \* 10\*10^(TokenC's decimals) / 8\*10^(TokenA's decimals)** (amountToSell \* `premium` / `amount`). She can then execute `buy(88, 4 \* 10^(TokenA's decimals))` on the contract, and will receive 4\*10^(TokenA's decimals) redeem tokens.
+Alice wants to be able to sell only **4** TokenA. She will first have to pay the premium (that is proportional to its share) by allowing the spending of his 10 TokenC by calling `approve(address spender, uint256 amount)` on the TokenC's contract and give as parameters the contract's address (`spender`) and for `amount`: **4\*10^(TokenA's decimals) \* 10\*10^(TokenC's decimals) / 8\*10^(TokenA's decimals)** (amountToSell \* `premium` / `amount`). She can then execute `buy(88, 4 * 10^(TokenA's decimals))` on the contract, and will receive 4\*10^(TokenA's decimals) redeem tokens.
 
 John, for his part, wants to sell **2** TokenA. He does the same thing and receives **2\*10^(TokensA's decimals)** redeem tokens.
 
-We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at only 10 TokenB! She needs to allow the contract to transfer **4 \* 10^(TokenA's decimals)** TokenAs from her account to be able to exercise. When she calls `exercise(88, 4 \* 10^(TokenA's decimals))` on the contract, it will transfer 4\*25 TokenB to Alice and 4 TokenA to Bob.
+We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at only 10 TokenB! She needs to allow the contract to transfer **4 \* 10^(TokenA's decimals)** TokenAs from her account to be able to exercise. When she calls `exercise(88, 4 * 10^(TokenA's decimals))` on the contract, it will transfer 4\*25 TokenB to Alice and 4 TokenA to Bob.
 
 John decided to give his right to exercise to his friend Jimmy. He did that simply by transferring his **2\*10^(TokensA's decimals)** redeem tokens to Jimmy's address.\
 Jimmy decides to only sell **1** TokenA with the option. So he will give to Bob (through the contract) **1\*10^(TokenA's decimals)**.
