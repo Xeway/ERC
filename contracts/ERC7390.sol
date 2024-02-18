@@ -24,7 +24,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         newIssuance.writer = _msgSender();
 
         IERC20 underlyingToken = IERC20(optionData.underlyingToken);
-        newIssuance.exerciseCost = (optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals());
+        newIssuance.exerciseCost = optionData.strike;
         if (optionData.side == Side.Call) {
             _transferFrom(underlyingToken, _msgSender(), address(this), optionData.amount);
         } else {
@@ -63,6 +63,9 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
 
         if (selectedIssuance.data.premium > 0) {
             uint256 premiumPaid = (amount * selectedIssuance.data.premium) / selectedIssuance.data.amount;
+            amount = premiumPaid * selectedIssuance.data.amount / selectedIssuance.data.premium;
+
+            if (amount == 0) revert AmountForbidden();
 
             bool success = IERC20(selectedIssuance.data.premiumToken).transferFrom(
                 _msgSender(),
@@ -91,7 +94,9 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         IERC20 strikeToken = IERC20(selectedIssuance.data.strikeToken);
 
         uint256 transferredExerciseCost = (amount * selectedIssuance.data.strike) / selectedIssuance.data.amount;
-        if (transferredExerciseCost == 0) revert Forbidden();
+        amount = (transferredExerciseCost * selectedIssuance.data.amount) / selectedIssuance.data.strike;
+
+        if (transferredExerciseCost == 0 || amount == 0) revert AmountForbidden();
 
         if (selectedIssuance.data.side == Side.Call) {
             // Buyer pays writer for the underlying token(s) at strike price
