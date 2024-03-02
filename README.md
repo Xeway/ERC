@@ -132,7 +132,7 @@ Token used as a reference to determine the strike price.
 
 Strike price. The option buyer MAY be able to exercise only fraction of the issuance and the paid strike price must be adjusted by the contract to reflect it.
 
-Note that `strike` is set for exercising the total `amount` of the issuance.
+Note that `strike` is meant to represent the price in `strikeToken` for a single `underlyingToken`.
 
 > Be aware of token decimals!
 
