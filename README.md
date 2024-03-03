@@ -282,7 +282,7 @@ MUST revert if `exerciseWindowEnd` is greater or equals than the current time.\
 If equals to the zero address, MUST set `receiver` to caller's address.
 
 *Transfers the un-exercised collateral to the writer's address.*
-*Deletes the option issuance from the contract if the retrieval was successful.*
+*MAY delete the option issuance from the contract if the retrieval was successful.*
 *Emits `Expired` event if the retrieval was successful.*
 
 #### `cancel`
@@ -299,7 +299,7 @@ MUST revert if at least one option's fraction has been bought.\
 If equals to the zero address, MUST set `receiver` to caller's address.
 
 *Transfers the un-exercised collateral to the writer's address.*
-*Deletes the option issuance from the contract if the cancelation was successful.*
+*MAY delete the option issuance from the contract if the cancelation was successful.*
 *Emits `Canceled` event if the cancelation was successful.*
 
 #### `updatePremium`
@@ -515,7 +515,7 @@ This standard implements the `updatePremium` function, which allows the writer t
 
 The contract supports multiple buyers for a single option issuance, meaning fractions of the option issuance can be bought. The ecosystem doesn't really support non-integers, so fractions can sometimes lead to rounding errors. This can lead to unexpected results, especially in the `exercise` and `buy` functions.
 
-- In the `buy` function, if the premium is set, the buyer has to pay for only a fraction proportional to the amount of options he wants to buy. If that fraction is not an integer, this will truncate and therefore round to floor. This means that that writer will receive less than the expected premium. We consider this risk pretty negligible given that most tokens have a high number of decimals, but it's important to be aware of it. Some buyer could exploit this by buying repeatedly small fraction, and therefore paying less than the expected premium. However, this probably wouldn't be profitable given the gas costs.
+- In the `buy` function, if the premium is set, the buyer has to pay for only a fraction proportional to the amount of options he wants to buy. If that fraction is not an integer, this will truncate and therefore round to floor. This means that writer will receive less than the expected premium. We consider this risk pretty negligible given that most tokens have a high number of decimals, but it's important to be aware of it. Some buyer could exploit this by buying repeatedly small fraction, and therefore paying less than the expected premium. However, this probably wouldn't be profitable given the gas costs.
 - In the `exercise` function, the exercise cost (`(amountToExercise * selectedIssuance.data.strike) / selectedIssuance.data.amount`) is proportional to the amount of options the buyer wants to exercise. So according to the same logic, the writer will receive less than expected in case of a call option, and the buyer will receive less than expected in case of a put option. Again, this risk could be exploited, but it's probably not profitable given the gas costs. At the end of the option's life, due to this rounding, some tokens could remain in the contract. The writer can retrieve them using the `retrieveExpiredTokens()` function.
 
 ## Copyright
