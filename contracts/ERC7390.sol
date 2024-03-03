@@ -24,7 +24,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         newIssuance.writer = _msgSender();
 
         IERC20 underlyingToken = IERC20(optionData.underlyingToken);
-        newIssuance.exerciseCost = optionData.strike;
+        newIssuance.exerciseCost = (optionData.strike * optionData.amount) / (10 ** underlyingToken.decimals());
         if (optionData.side == Side.Call) {
             _transferFrom(underlyingToken, _msgSender(), address(this), optionData.amount);
         } else {
