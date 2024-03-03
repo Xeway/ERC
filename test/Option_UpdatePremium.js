@@ -1,12 +1,7 @@
 const { time, loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const {
-  deployInfraFixture,
-  TOKEN2_START_BALANCE,
-  OPTION_COUNT,
-  PREMIUM,
-} = require("./Option_Globals");
+const { deployInfraFixture, TOKEN2_START_BALANCE, OPTION_COUNT, PREMIUM } = require("./Option_Globals");
 
 describe("Updating option premium", function () {
   it("Should update premium successfully", async function () {
@@ -34,7 +29,10 @@ describe("Updating option premium", function () {
 
   it("Should fail to update since no issuance exists", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
-    await expect(optionContract.connect(acct1).updatePremium(0, 1)).to.be.revertedWith("writer");
+    await expect(optionContract.connect(acct1).updatePremium(0, 1)).to.be.revertedWithCustomError(
+      optionContract,
+      "Forbidden"
+    );
   });
 
   it("Should fail to update premium since the updater is not the writer", async function () {
@@ -44,6 +42,9 @@ describe("Updating option premium", function () {
 
     await expect(optionContract.connect(acct1).create(callOption)).to.emit(optionContract, "Created");
 
-    await expect(optionContract.connect(acct2).updatePremium(0, 1)).to.be.revertedWith("writer");
+    await expect(optionContract.connect(acct2).updatePremium(0, 1)).to.be.revertedWithCustomError(
+      optionContract,
+      "Forbidden"
+    );
   });
 });

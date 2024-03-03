@@ -25,7 +25,10 @@ describe("Retrieving expired tokens", function () {
 
     await time.increase(2 * 60 * 60);
 
-    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.emit(optionContract, "Expired");
+    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.emit(
+      optionContract,
+      "Expired"
+    );
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(0);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE);
@@ -47,7 +50,10 @@ describe("Retrieving expired tokens", function () {
 
     await time.increase(2 * 60 * 60);
 
-    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.emit(optionContract, "Expired");
+    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.emit(
+      optionContract,
+      "Expired"
+    );
 
     expect(await token2.balanceOf(optionContract.target)).to.equal(0);
     expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE);
@@ -89,7 +95,10 @@ describe("Retrieving expired tokens", function () {
 
     await time.increase(2 * 60 * 60);
 
-    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.emit(optionContract, "Expired");
+    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.emit(
+      optionContract,
+      "Expired"
+    );
 
     expect(await token1.balanceOf(optionContract.target)).to.equal(0);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE - boughtOptions);
@@ -103,40 +112,37 @@ describe("Retrieving expired tokens", function () {
     const { putOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
     await token2.connect(acct1).approve(optionContract.target, STRIKE);
     await expect(optionContract.connect(acct1).create(putOption)).to.emit(optionContract, "Created");
-
     expect(await token2.balanceOf(optionContract.target)).to.equal(STRIKE);
     expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE - STRIKE);
 
-    const boughtOptions = Math.ceil(OPTION_COUNT / 6);
-    const premiumPaidModulo = (boughtOptions * PREMIUM) % OPTION_COUNT;
+    let boughtOptions = Math.ceil(OPTION_COUNT / 6);
     let premiumPaid = Math.floor((boughtOptions * PREMIUM) / OPTION_COUNT);
-    if (premiumPaidModulo > 0) {
-      premiumPaid += 1;
-    }
 
-    const totalStrikePriceModulo = (boughtOptions * putOption.strike) % OPTION_COUNT;
-    let totalStrikePrice = Math.floor((boughtOptions * putOption.strike) / OPTION_COUNT);
-
-    if (totalStrikePriceModulo > 0) {
-      totalStrikePrice--;
-    }
-
-    await token1.connect(acct2).approve(optionContract.target, boughtOptions);
     await token2.connect(acct2).approve(optionContract.target, premiumPaid);
     await expect(optionContract.connect(acct2).buy(0, boughtOptions)).to.emit(optionContract, "Bought");
 
-    const exercisableOptions = await optionContract.balanceOf(acct2.address, 0);
-    await expect(optionContract.connect(acct2).exercise(0, exercisableOptions)).to.emit(optionContract, "Exercised");
+    expect(await token2.balanceOf(optionContract.target)).to.equal(STRIKE);
+    expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE + premiumPaid - STRIKE);
+    expect(await token2.balanceOf(acct2.address)).to.equal(TOKEN2_START_BALANCE - premiumPaid);
+    boughtOptions = Math.floor((premiumPaid * OPTION_COUNT) / PREMIUM);
+    expect(await optionContract.balanceOf(acct2.address, 0)).to.equal(boughtOptions);
 
-    expect(await token2.balanceOf(optionContract.target)).to.equal(STRIKE - totalStrikePrice);    
+    await token1.connect(acct2).approve(optionContract.target, boughtOptions);
+    await expect(optionContract.connect(acct2).exercise(0, boughtOptions)).to.emit(optionContract, "Exercised");
+
+    const totalStrikePrice = Math.floor((boughtOptions * STRIKE) / OPTION_COUNT);
+    expect(await token2.balanceOf(optionContract.target)).to.equal(STRIKE - totalStrikePrice);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE + boughtOptions);
     expect(await token1.balanceOf(acct2.address)).to.equal(TOKEN1_START_BALANCE - boughtOptions);
     expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE + premiumPaid - STRIKE);
     expect(await token2.balanceOf(acct2.address)).to.equal(TOKEN2_START_BALANCE - premiumPaid + totalStrikePrice);
-    
+
     await time.increase(2 * 60 * 60);
 
-    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.emit(optionContract, "Expired");
+    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.emit(
+      optionContract,
+      "Expired"
+    );
 
     expect(await token2.balanceOf(optionContract.target)).to.equal(0);
     expect(await token2.balanceOf(acct1.address)).to.equal(TOKEN2_START_BALANCE - totalStrikePrice + premiumPaid);
@@ -148,7 +154,10 @@ describe("Retrieving expired tokens", function () {
 
   it("Should fail to retrieve tokens since no issuance exists", async function () {
     const { callOption, optionContract, token1, token2, acct1, acct2 } = await loadFixture(deployInfraFixture);
-    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.be.revertedWith("writer");
+    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.be.revertedWithCustomError(
+      optionContract,
+      "Forbidden"
+    );
   });
 
   it("Should fail to retrieve tokens since retriever is not the writer", async function () {
@@ -163,7 +172,10 @@ describe("Retrieving expired tokens", function () {
 
     await time.increase(2 * 60 * 60);
 
-    await expect(optionContract.connect(acct2).retrieveExpiredTokens(0, acct2.address)).to.be.revertedWith("writer");
+    await expect(optionContract.connect(acct2).retrieveExpiredTokens(0, acct2.address)).to.be.revertedWithCustomError(
+      optionContract,
+      "Forbidden"
+    );
   });
 
   it("Should fail to retrieve tokens since exercise window is still open", async function () {
@@ -176,6 +188,9 @@ describe("Retrieving expired tokens", function () {
     expect(await token1.balanceOf(optionContract.target)).to.equal(OPTION_COUNT);
     expect(await token1.balanceOf(acct1.address)).to.equal(TOKEN1_START_BALANCE - OPTION_COUNT);
 
-    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.be.revertedWith("exerciseWindowEnd");
+    await expect(optionContract.connect(acct1).retrieveExpiredTokens(0, acct1.address)).to.be.revertedWithCustomError(
+      optionContract,
+      "TimeForbidden"
+    );
   });
 });
