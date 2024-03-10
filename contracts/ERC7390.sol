@@ -93,7 +93,7 @@ abstract contract ERC7390 is IERC7390, ERC1155, ReentrancyGuard {
         IERC20 underlyingToken = IERC20(selectedIssuance.data.underlyingToken);
         IERC20 strikeToken = IERC20(selectedIssuance.data.strikeToken);
 
-        uint256 transferredExerciseCost = (amount * selectedIssuance.data.strike) / selectedIssuance.data.amount;
+        uint256 transferredExerciseCost = (amount * selectedIssuance.data.strike) / (10**underlyingToken.decimals());
         amount = (transferredExerciseCost * selectedIssuance.data.amount) / selectedIssuance.data.strike;
 
         if (transferredExerciseCost == 0 || amount == 0) revert AmountForbidden();

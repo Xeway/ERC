@@ -197,7 +197,7 @@ Amount of underlying tokens that have been bought for this issuance.
 **Type: `uint256`**
 
 Amount of `strikeToken` tokens that have been transferred to the writer (call) or buyers (put) of the option issuance.\
-This is an utility variable used to not always have to calculate the total exercise cost transferred. It's updated at the same time `exercisedAmount` is updated. The calculation is `(exercisedAmount * selectedIssuance.data.strike) / selectedIssuance.data.amount`.
+This is an utility variable used to not always have to calculate the total exercise cost transferred. It's updated at the same time `exercisedAmount` is updated. The calculation is `(amount * selectedIssuance.data.strike) / (10**underlyingToken.decimals())`.
 
 #### `exerciseCost`
 
@@ -446,10 +446,10 @@ Alice wants to be able to buy only **4** TokenA. She will first have to pay the 
 
 John, for his part, wants to buy **2** TokenA. He does the same thing and receives **2\*10^(TokensA's decimals)** redeem tokens.
 
-We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at 50 TokenB! She needs to allow the contract to transfer **4\*10^(TokenA's decimals) \* 25\*10^(TokenB's decimals) / 8\*10^(TokenA's decimals)** (amountToExercise \* `strike` / `amount`) TokenBs from her account to be able to exercise. When she calls `exercise(88, 4 * 10^(TokenA's decimals))` on the contract, it will transfer 4 TokenA to Alice, and 4\*25 TokenB to Bob.
+We're on the 15th of July and Alice wants to exercise his option because 1 TokenA is traded at 50 TokenB! She needs to allow the contract to transfer **4\*10^(TokenA's decimals) \* 25\*10^(TokenB's decimals) / 10^(TokenA's decimals)** (amountToExercise \* `strike` / 10^(`TokenA`'s decimals)) TokenBs from her account to be able to exercise. When she calls `exercise(88, 4 * 10^(TokenA's decimals))` on the contract, it will transfer 4 TokenA to Alice, and 4\*25 TokenB to Bob.
 
 John decided to give his right to exercise to his friend Jimmy. He did that simply by transferring his **2\*10^(TokensA's decimals)** redeem tokens to Jimmy's address.\
-Jimmy decides to only buy **1** TokenA with the option. So he will give to Bob (through the contract) **1\*10^(TokenA's decimals) \* 25\*10^(TokenB's decimals) / 8\*10^(TokenA's decimals)**.
+Jimmy decides to only buy **1** TokenA with the option. So he will give to Bob (through the contract) **1\*10^(TokenA's decimals) \* 25\*10^(TokenB's decimals) / 10^(TokenA's decimals)**.
 
 #### Put Option
 
@@ -513,10 +513,7 @@ For preventing clear arbitrage cases when option writer considers the issuance t
 
 This standard implements the `updatePremium` function, which allows the writer to update the premium price at any time. This function can lead to security issues for the buyer: a buyer could buy an option, and the writer could front-run buyer's transaction by updating the premium price to a very high value. To prevent this, we advise the buyer to only allow for the agreed amount of premium to be spent by the contract, not more.
 
-The contract supports multiple buyers for a single option issuance, meaning fractions of the option issuance can be bought. The ecosystem doesn't really support non-integers, so fractions can sometimes lead to rounding errors. This can lead to unexpected results, especially in the `exercise` and `buy` functions.
-
-- In the `buy` function, if the premium is set, the buyer has to pay for only a fraction proportional to the amount of options he wants to buy. If that fraction is not an integer, this will truncate and therefore round to floor. This means that writer will receive less than the expected premium. We consider this risk pretty negligible given that most tokens have a high number of decimals, but it's important to be aware of it. Some buyer could exploit this by buying repeatedly small fraction, and therefore paying less than the expected premium. However, this probably wouldn't be profitable given the gas costs.
-- In the `exercise` function, the exercise cost (`(amountToExercise * selectedIssuance.data.strike) / selectedIssuance.data.amount`) is proportional to the amount of options the buyer wants to exercise. So according to the same logic, the writer will receive less than expected in case of a call option, and the buyer will receive less than expected in case of a put option. Again, this risk could be exploited, but it's probably not profitable given the gas costs. At the end of the option's life, due to this rounding, some tokens could remain in the contract. The writer can retrieve them using the `retrieveExpiredTokens()` function.
+The contract supports multiple buyers for a single option issuance, meaning fractions of the option issuance can be bought. The ecosystem doesn't really support non-integers, so fractions can sometimes lead to rounding errors. This can lead to unexpected results, especially in the `buy` function: if the premium is set, the buyer has to pay for only a fraction proportional to the amount of options he wants to buy. If that fraction is not an integer, this will truncate and therefore round to floor. This means that writer will receive less than the expected premium. We consider this risk pretty negligible given that most tokens have a high number of decimals, but it's important to be aware of it. Some buyer could exploit this by buying repeatedly small fraction, and therefore paying less than the expected premium. However, this probably wouldn't be profitable given the gas costs.
 
 ## Copyright
 
